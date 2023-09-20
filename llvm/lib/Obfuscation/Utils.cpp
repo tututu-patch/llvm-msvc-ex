@@ -52,6 +52,8 @@ std::string readAnnotate(Function *f) {
       }
     }
   }
+  if(!f->getAnnotationStrings().empty())
+    annotation+=std::string(f->getAnnotationStrings().data());
   return annotation;
 }
 

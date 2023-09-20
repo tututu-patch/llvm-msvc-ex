@@ -25,16 +25,16 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
               createModuleToFunctionPassAdaptor(BogusControlFlowPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
-          MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
+          
           //MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
-          //MPM.addPass(ConstObfuscationPass());
+          MPM.addPass(ConstObfuscationPass());
          
         });
         PB.registerOptimizerEarlyEPCallback([](llvm::ModulePassManager &MPM,
                                               OptimizationLevel Level) {
            MPM.addPass(StringObfuscationPass());
            MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
-          // MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
+           //MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
             //MPM.addPass(ConstObfuscationPass());
           });
 
@@ -42,15 +42,16 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
                                               OptimizationLevel Level) {
           MPM.addPass(createModuleToFunctionPassAdaptor(SubstitutionPass()));
          
-          MPM.addPass(ConstObfuscationPass());
+          //MPM.addPass(ConstObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
-         // MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
+          //MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
           //MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
         });
         PB.registerVectorizerStartEPCallback([](FunctionPassManager& FPM, OptimizationLevel Level) {
                 //FPM.addPass(IndirectCallPass());
               //FPM.addPass(MBAObfuscationPass());
+            //FPM.addPass(VmFlatObfuscationPass());
                 });
       }};
 }

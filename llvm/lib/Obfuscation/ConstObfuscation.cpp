@@ -53,8 +53,10 @@ struct ConstEncryption {
     std::vector<Pair *> updates;
     for (User::op_iterator opi = ii->op_begin(); opi != ii->op_end();
          opi++, pos++) {
+      //printf"CONST OBFUS %s\r\n",ii->getName().data());
       Value *v = *opi;
       if (isa<ConstantInt>(*v)) {
+        //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
         ConstantInt *consts = (ConstantInt *)v;
         Type *int8ty = Type::getInt8Ty(f->getContext());
         Type *int16ty = Type::getInt16Ty(f->getContext());
@@ -62,6 +64,7 @@ struct ConstEncryption {
         Type *int64ty = Type::getInt64Ty(f->getContext());
         std::string name = "global_const" + m_name +std::to_string(count);
         if (consts->getType() == int8ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned char data = (consts->getValue().getZExtValue()) & 0xFF;
           unsigned char rr = (rand() & 0xFF);
           unsigned char tt = data ^ rr;
@@ -79,6 +82,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int16ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
           unsigned short rr = (rand() & 0xFFFF);
           unsigned short tt = data ^ rr;
@@ -97,6 +101,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int32ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned int data = (consts->getValue().getZExtValue()) & 0xFFFFFFFF;
           unsigned int rr = (rand() & 0xFFFFFFFF);
           unsigned int tt = data ^ rr;
@@ -115,6 +120,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int64ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned long long data =
               (consts->getValue().getZExtValue()) & 0xFFFFFFFFFFFFFFFF;
           unsigned long long rr =
@@ -144,11 +150,13 @@ struct ConstEncryption {
   }
   void handleInstruction1(Function *f, Instruction *ii, unsigned int &count) {
     int pos = 0;
+    //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
     BasicBlock *bb = &f->getEntryBlock();
     std::vector<Pair *> updates;
     IRBuilder<> irb(&*bb->getFirstInsertionPt());
     for (User::op_iterator opi = ii->op_begin(); opi != ii->op_end();
          opi++, pos++) {
+      //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
       Value *v = *opi;
       if (isa<ConstantInt>(*v)) {
         ConstantInt *consts = (ConstantInt *)v;
@@ -158,6 +166,7 @@ struct ConstEncryption {
         Type *int64ty = Type::getInt64Ty(f->getContext());
         std::string name = "global_const" + std::to_string(count);
         if (consts->getType() == int8ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned char data = (consts->getValue().getZExtValue()) & 0xFF;
           unsigned char rr = (rand() & 0xFF);
           unsigned char tt = data ^ rr;
@@ -174,6 +183,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int16ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
           unsigned short rr = (rand() & 0xFFFF);
           unsigned short tt = data ^ rr;
@@ -190,6 +200,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int32ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned int data = (consts->getValue().getZExtValue()) & 0xFFFFFFFF;
           unsigned int rr = (rand() & 0xFFFFFFFF);
           unsigned int tt = data ^ rr;
@@ -206,6 +217,7 @@ struct ConstEncryption {
           updates.push_back(node);
           count++;
         } else if (consts->getType() == int64ty) {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned long long data =
               (consts->getValue().getZExtValue()) & 0xFFFFFFFFFFFFFFFF;
           unsigned long long rr =
@@ -228,13 +240,16 @@ struct ConstEncryption {
           continue;
       }
     }
+    //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
     for (const auto &update : updates)
       ii->setOperand(update->pos, update->val);
+    //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
   }
   void ReplaceConst(Module *M) {
     unsigned int count = 0;
-
+    //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
     for (Function &func : *M) {
+      //printf"%s\r\n",func.getName().data());
       std::vector<Instruction *> instr_list;
       for (BasicBlock &bb : func)
         for (Instruction &ii : bb) {
@@ -249,8 +264,10 @@ struct ConstEncryption {
         }
       for (const auto &iter : instr_list) {
         if (ConstUseGlobal) {
+            //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
             handleInstruction2(&func,iter,count,M->getName().data());
         } else {
+          //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           handleInstruction1(&func, iter, count);
         }
       }
