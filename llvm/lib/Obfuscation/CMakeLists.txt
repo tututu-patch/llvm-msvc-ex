@@ -9,6 +9,8 @@ add_llvm_pass_plugin(Obfuscation
   StringObfuscation.cpp
   MBAObfuscation.cpp
   ConstObfuscation.cpp
+  DataObfuscation.cpp
+  VMFlatten.cpp
   Plugin.cpp
 
   ADDITIONAL_HEADER_DIRS
