@@ -78,7 +78,7 @@ void fixStack(Function &F) {
       }
     }
     for (unsigned int i = 0; i != tmpReg.size(); ++i) {
-      DemoteRegToStack(*tmpReg.at(i), F.begin()->getTerminator());
+      DemoteRegToStack(*tmpReg.at(i), true,F.begin()->getTerminator());
     }
 
     for (unsigned int i = 0; i != tmpPhi.size(); ++i) {
