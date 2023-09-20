@@ -44,7 +44,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
          
           //MPM.addPass(ConstObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
-          //MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
+          MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
           //MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
           //MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
         });
