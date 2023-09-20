@@ -28,7 +28,7 @@
 using namespace llvm;
 
 static cl::opt<bool>
-    RunIndirectCallPass("indirect-call", cl::init(false),
+    RunIndirectCallPass("ind-call", cl::init(false),
                         cl::desc("OLLVM - IndirectCallPass"));
 
 void IndirectCallPass::numberCallees(Function &F) {
@@ -161,7 +161,7 @@ bool IndirectCallPass::runIndirectCall(Function &F) {
 
 PreservedAnalyses IndirectCallPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
-  if (toObfuscate(RunIndirectCallPass, &F, "indirect-call")) {
+  if (toObfuscate(RunIndirectCallPass, &F, "ind-call")) {
     if (runIndirectCall(F))
       return PreservedAnalyses::none();
   }

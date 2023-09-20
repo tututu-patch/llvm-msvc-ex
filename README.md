@@ -3,7 +3,7 @@
 
 ### add Something for ollvm
 ```
-Original obfuscation passes including bogus control flow (-bcf), split basic block (-split), control flow flattening (-fla) and substitution (-sub) and (-mba-substitute) and (-indirect-call) and (-string-obfus).
+Original obfuscation passes including bogus control flow (-bcf), split basic block (-split), control flow flattening (-fla) and substitution (-sub) and (-mba-subs) and (-ind-call) and (-string-obfus) and (-const-obfus).
 ```
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -63,7 +63,7 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 ### Example
 Add To VS Project Compiler Cmdline
 ```
--mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -fla -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -indirect-call -mllvm -mba-substitute
+-mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -fla -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -mba-subs -mllvm -const-obfus -mllvm -const-glb
 ```
 
 ### How to contribute?

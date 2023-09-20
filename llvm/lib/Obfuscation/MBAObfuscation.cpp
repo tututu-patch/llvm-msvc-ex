@@ -27,7 +27,7 @@ using namespace llvm;
 using namespace Eigen;
 
 static cl::opt<bool>
-    RunMBAObfuscationPass("mba-substitute", cl::init(false),
+    RunMBAObfuscationPass("mba-subs", cl::init(false),
                           cl::desc("OLLVM - MBA Substitute"));
 
 static cl::opt<int>
@@ -342,7 +342,7 @@ bool runMBAObfuscation(Function &F) {
     return false;
   }
 
-  //outs() << "Start MBASubstitute Pass.\n";
+  outs() << "Start MBASubstitute Pass.\n";
 
   for (int i = 0; i < ObfuTimes; i++) {
     // outs() << "Times: " << i << "\n";
@@ -388,7 +388,7 @@ bool runMBAObfuscation(Function &F) {
 
   // OutputIR(&F);
 
- // outs() << "Finished MBASubstitute Pass.\n";
+  outs() << "Finished MBASubstitute Pass.\n";
 
   return false;
 }
@@ -397,7 +397,7 @@ bool runMBAObfuscation(Function &F) {
 
 PreservedAnalyses MBAObfuscationPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
-  if (toObfuscate(RunMBAObfuscationPass, &F, "mba-substitute")) {
+  if (toObfuscate(RunMBAObfuscationPass, &F, "mba-subs")) {
     if (runMBAObfuscation(F))
       return PreservedAnalyses::none();
   }
