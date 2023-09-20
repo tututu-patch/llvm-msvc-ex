@@ -390,7 +390,7 @@ bool runMBAObfuscation(Function &F) {
 
   outs() << "Finished MBASubstitute Pass.\n";
 
-  return false;
+  return true;
 }
 
 } // namespace

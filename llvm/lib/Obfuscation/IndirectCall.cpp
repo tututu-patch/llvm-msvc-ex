@@ -156,7 +156,7 @@ bool IndirectCallPass::runIndirectCall(Function &F) {
     FuncPtr->setName("Call_" + Callee->getName());
     CB->setCalledOperand(FuncPtr);
   }
-  return false;
+  return true;
 }
 
 PreservedAnalyses IndirectCallPass::run(Function &F,

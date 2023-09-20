@@ -54,7 +54,7 @@ struct DataObfuscator {
     SetVector<AllocaInst *> allocaInsts;
     collectAlloca(f, allocaInsts);
     dataFlowObfu(f, allocaInsts);
-    return false;
+    return true;
   }
 };
 

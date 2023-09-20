@@ -63,9 +63,11 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 ### Example
 Add To VS Project Compiler Cmdline
 ```
--mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -mba-subs -mllvm -mba-prob=20 -mllvm -const-obfus -mllvm -const-glb -mllvm -data-obfus -mllvm -mba-prob=20
+-mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -fla
 ```
-
+```
+-mllvm -string-obfus -mllvm -ind-call -mllvm -mba-subs -mllvm -mba-prob=20 -mllvm -const-obfus -mllvm -const-glb -mllvm -data-obfus -mllvm -mba-prob=20
+```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice
 - https://docs.github.com/en/get-started/quickstart/contributing-to-projects
