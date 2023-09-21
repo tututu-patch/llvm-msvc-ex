@@ -63,9 +63,9 @@ void DataObfuscator::choose(int range, SetVector<int> *selected,
   bool *used = (bool *)malloc(sizeof(bool) * range);
   memset(used, 0, sizeof(used));
   for (int i = 0; i < count; i++) {
-    int id = rand() % range;
+    int id = cryptoutils->get_uint32_t() % range;
     while (used[id])
-      id = rand() % range;
+      id = cryptoutils->get_uint32_t() % range;
     used[id] = true;
     selected->insert(id);
   }
@@ -167,12 +167,12 @@ void DataObfuscator::doObfu(Function &f, SetVector<AllocaInst *> &varList,
           SetVector<int> rubbishVars;
           for (int v : unused)
             rubbishVars.insert(freeId[v]);
-          Value *vr = ConstantInt::get(type, rand());
+          Value *vr = ConstantInt::get(type, cryptoutils->get_uint32_t());
           irb.SetInsertPoint(&inst);
           Value *ga = array[freeId[used[0]]];
           Value *gb = array[freeId[used[1]]];
           Value *gc = array[freeId[used[2]]];
-          if (rand() % 2) {
+          if (cryptoutils->get_uint32_t() % 2) {
             irb.CreateStore(
                 irb.CreateAdd(irb.CreateLoad(ga->getType(), ga), vr), gb);
             rubbishCode(irb, array, rubbishVars, prob);
@@ -218,12 +218,12 @@ void DataObfuscator::doObfu(Function &f, SetVector<AllocaInst *> &varList,
           SetVector<int> rubbishVars;
           for (int v : unused)
             rubbishVars.insert(freeId[v]);
-          Value *vr = ConstantInt::get(type, rand());
+          Value *vr = ConstantInt::get(type, cryptoutils->get_uint32_t());
           irb.SetInsertPoint(&inst);
           Value *ga = array[freeId[used[0]]];
           Value *gb = array[freeId[used[1]]];
           Value *gc = array[freeId[used[2]]];
-          if (rand() % 2) {
+          if (cryptoutils->get_uint32_t() % 2) {
             irb.CreateStore(
                 irb.CreateAdd(irb.CreateLoad(ga->getType(), ga), vr), gb);
             rubbishCode(irb, array, rubbishVars, prob);
@@ -276,16 +276,16 @@ void DataObfuscator::doObfu(Function &f, SetVector<AllocaInst *> &varList,
 void DataObfuscator::rubbishCode(IRBuilder<> &irb,
                                  SetVector<AllocaInst *> &array,
                                  SetVector<int> &vars, int prob) {
-  if (rand() % 100 > prob)
+  if (cryptoutils->get_uint32_t() % 100 > prob)
     return;
   SetVector<int> idx;
   choose(vars.size(), &idx, nullptr, 2);
   Value *l = (Value *)array[vars[idx[0]]];
   Value *r;
-  int op = rand() % 4;
-  int o = rand() % 2;
+  int op = cryptoutils->get_uint32_t() % 4;
+  int o = cryptoutils->get_uint32_t() % 2;
   if (o)
-    r = ConstantInt::get(array[0]->getAllocatedType(), rand());
+    r = ConstantInt::get(array[0]->getAllocatedType(), cryptoutils->get_uint32_t());
   else
     r = irb.CreateLoad(array[vars[idx[1]]]->getType(), array[vars[idx[1]]]);
   if (op == 0)

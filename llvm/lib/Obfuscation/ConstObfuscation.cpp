@@ -66,7 +66,7 @@ struct ConstEncryption {
         if (consts->getType() == int8ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned char data = (consts->getValue().getZExtValue()) & 0xFF;
-          unsigned char rr = (rand() & 0xFF);
+          unsigned char rr = (cryptoutils->get_uint32_t() & 0xFF);
           unsigned char tt = data ^ rr;
           Value *val1 = ConstantInt::get(int8ty, tt);
           Value *val2 = ConstantInt::get(int8ty, rr);
@@ -84,7 +84,7 @@ struct ConstEncryption {
         } else if (consts->getType() == int16ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
-          unsigned short rr = (rand() & 0xFFFF);
+          unsigned short rr = (cryptoutils->get_uint32_t() & 0xFFFF);
           unsigned short tt = data ^ rr;
           Value *val1 = ConstantInt::get(int16ty, tt);
           Value *val2 = ConstantInt::get(int16ty, rr);
@@ -103,7 +103,7 @@ struct ConstEncryption {
         } else if (consts->getType() == int32ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned int data = (consts->getValue().getZExtValue()) & 0xFFFFFFFF;
-          unsigned int rr = (rand() & 0xFFFFFFFF);
+          unsigned int rr = (cryptoutils->get_uint32_t() & 0xFFFFFFFF);
           unsigned int tt = data ^ rr;
           Value *val1 = ConstantInt::get(int32ty, tt);
           Value *val2 = ConstantInt::get(int32ty, rr);
@@ -124,7 +124,7 @@ struct ConstEncryption {
           unsigned long long data =
               (consts->getValue().getZExtValue()) & 0xFFFFFFFFFFFFFFFF;
           unsigned long long rr =
-              (((((unsigned long long)rand()) << 32) | rand()) &
+              (cryptoutils->get_uint64_t() &
                0xFFFFFFFFFFFFFFFF);
           unsigned long long tt = data ^ rr;
           Value *val1 = ConstantInt::get(int64ty, tt);
@@ -168,7 +168,7 @@ struct ConstEncryption {
         if (consts->getType() == int8ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned char data = (consts->getValue().getZExtValue()) & 0xFF;
-          unsigned char rr = (rand() & 0xFF);
+          unsigned char rr = (cryptoutils->get_uint32_t() & 0xFF);
           unsigned char tt = data ^ rr;
           Value *val1 = ConstantInt::get(int8ty, tt);
           Value *val2 = ConstantInt::get(int8ty, rr);
@@ -185,7 +185,7 @@ struct ConstEncryption {
         } else if (consts->getType() == int16ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
-          unsigned short rr = (rand() & 0xFFFF);
+          unsigned short rr = (cryptoutils->get_uint32_t() & 0xFFFF);
           unsigned short tt = data ^ rr;
           Value *val1 = ConstantInt::get(int16ty, tt);
           Value *val2 = ConstantInt::get(int16ty, rr);
@@ -202,7 +202,7 @@ struct ConstEncryption {
         } else if (consts->getType() == int32ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned int data = (consts->getValue().getZExtValue()) & 0xFFFFFFFF;
-          unsigned int rr = (rand() & 0xFFFFFFFF);
+          unsigned int rr = (cryptoutils->get_uint32_t() & 0xFFFFFFFF);
           unsigned int tt = data ^ rr;
           Value *val1 = ConstantInt::get(int32ty, tt);
           Value *val2 = ConstantInt::get(int32ty, rr);
@@ -221,7 +221,7 @@ struct ConstEncryption {
           unsigned long long data =
               (consts->getValue().getZExtValue()) & 0xFFFFFFFFFFFFFFFF;
           unsigned long long rr =
-              (((((unsigned long long)rand()) << 32) | rand()) &
+              (cryptoutils->get_uint64_t() &
                0xFFFFFFFFFFFFFFFF);
           unsigned long long tt = data ^ rr;
           Value *val1 = ConstantInt::get(int64ty, tt);

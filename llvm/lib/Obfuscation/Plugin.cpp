@@ -17,7 +17,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
   return {
       LLVM_PLUGIN_API_VERSION, "Obfuscation", LLVM_VERSION_STRING,
       [](PassBuilder &PB) {
-        srand(time(nullptr));
+        //srand(time(nullptr));
         PB.registerPipelineStartEPCallback([](llvm::ModulePassManager &MPM,
                                               OptimizationLevel Level) {
           MPM.addPass(createModuleToFunctionPassAdaptor(SplitBasicBlockPass()));

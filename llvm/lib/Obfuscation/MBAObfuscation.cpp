@@ -70,7 +70,7 @@ int64_t *generateLinearMBA(int exprNumber) {
   while (true) {
     std::fill_n(coeffs, 15, 0);
     for (int i = 0; i < exprNumber; i++) {
-      exprSelector[i] = rand() % 15;
+      exprSelector[i] = cryptoutils->get_uint32_t() % 15;
     }
     MatrixXd A(4, exprNumber);
     VectorXd b(4);

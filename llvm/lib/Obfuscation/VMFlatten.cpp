@@ -61,7 +61,7 @@ std::vector<BasicBlock *> *getBlocks(Function *function,
   return lists;
 }
 unsigned int getUniqueNumber(std::vector<unsigned int> *rand_list) {
-  unsigned int num = rand();
+  unsigned int num = cryptoutils->get_uint32_t();
   while (true) {
     bool state = true;
     for (std::vector<unsigned int>::iterator n = rand_list->begin();
@@ -72,7 +72,7 @@ unsigned int getUniqueNumber(std::vector<unsigned int> *rand_list) {
       }
     if (state)
       break;
-    num = rand();
+    num = cryptoutils->get_uint32_t();
   }
   return num;
 }
@@ -226,74 +226,83 @@ void DoFlatten(Function *f, int seed) {
     errs()<<"end gen ins\r\n";
     dump_inst(&all_inst);
     std::vector<Constant *> opcodes;
-
+    auto type_int32ty = Type::getInt32Ty(f->getContext());
+    auto type_int64ty = Type::getInt64Ty(f->getContext());
     for (std::vector<VMInst *>::iterator i = all_inst.begin(); i != all_inst.end(); i++){
         VMInst *inst = *i;
-        opcodes.push_back(ConstantInt::get(Type::getInt32Ty(f->getContext()), inst->type));
-        opcodes.push_back(ConstantInt::get(Type::getInt32Ty(f->getContext()), inst->op1));
-        opcodes.push_back(ConstantInt::get(Type::getInt32Ty(f->getContext()), inst->op2));
+        opcodes.push_back(ConstantInt::get(type_int64ty, inst->type));
+        opcodes.push_back(ConstantInt::get(type_int64ty, inst->op1));
+        opcodes.push_back(ConstantInt::get(type_int64ty, inst->op2));
     }
     errs()<<"inst ok\r\n";
 
-    ArrayType *AT = ArrayType::get(Type::getInt32Ty(f->getContext()), opcodes.size());
+    ArrayType *AT = ArrayType::get(type_int64ty, opcodes.size());
     Constant *opcode_array = ConstantArray::get(AT, ArrayRef<Constant *>(opcodes));
     GlobalVariable *oparr_var = new GlobalVariable(*(f->getParent()), AT, false, GlobalValue::LinkageTypes::PrivateLinkage, opcode_array, "opcodes");
     // 去除第一个基本块末尾的跳转
     oldEntry->getTerminator()->eraseFromParent();
-    AllocaInst *vm_pc = new AllocaInst(Type::getInt32Ty(f->getContext()), 0, Twine("VMpc"), oldEntry);
-    ConstantInt *init_pc = ConstantInt::get(Type::getInt32Ty(f->getContext()), 0);
+    AllocaInst *vm_pc = new AllocaInst(type_int64ty, 0, Twine("VMpc"), oldEntry);
+    ConstantInt *init_pc = ConstantInt::get(type_int64ty, 0);
     new StoreInst(init_pc, vm_pc, oldEntry);
-    AllocaInst *vm_flag = new AllocaInst(Type::getInt32Ty(f->getContext()), 0, Twine("VMJmpFlag"), oldEntry);
+    AllocaInst *vm_flag = new AllocaInst(type_int64ty, 0, Twine("VMJmpFlag"), oldEntry);
     BasicBlock *vm_entry = BasicBlock::Create(f->getContext(), "VMEntry", f, firstbb);
 
     BranchInst::Create(vm_entry, oldEntry);
     IRBuilder<> IRB(vm_entry);
-    Value *zero = ConstantInt::get(Type::getInt32Ty(f->getContext()), 0);
+    Value *zero = ConstantInt::get(type_int64ty, 0);
 
-    Value *op1_offset = IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc), ConstantInt::get(Type::getInt32Ty(f->getContext()), 1));
-    Value *op2_offset = IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(),vm_pc), ConstantInt::get(Type::getInt32Ty(f->getContext()), 2));
+    Value *op1_offset = IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc), ConstantInt::get(type_int64ty, 1));
+    Value *op2_offset = IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(),vm_pc), ConstantInt::get(type_int64ty, 2));
 
-  auto optype_gep = IRB.CreateGEP(AT, oparr_var, {zero, IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc)});
+  auto optype_gep = IRB.CreateGEP(oparr_var->getValueType(), oparr_var, {zero, IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc)});
     Value *optype = IRB.CreateLoad(optype_gep->getType(),
                                    optype_gep);
-  auto op1_gep =IRB.CreateGEP(AT, oparr_var, {zero, op1_offset});
+  auto op1_gep =IRB.CreateGEP(oparr_var->getValueType(), oparr_var, {zero, op1_offset});
     Value *op1 = IRB.CreateLoad(op1_gep->getType(),
                                 op1_gep);
-    auto op2_gep = IRB.CreateGEP(AT, oparr_var, {zero, op2_offset});
+    auto op2_gep = IRB.CreateGEP(oparr_var->getValueType(), oparr_var, {zero, op2_offset});
     Value *op2 = IRB.CreateLoad(op2_gep->getType(),
                                 op2_gep);
 
-    IRB.CreateStore(IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(),vm_pc), ConstantInt::get(Type::getInt32Ty(f->getContext()), 3)), vm_pc);
+    IRB.CreateStore(IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(),vm_pc), ConstantInt::get(type_int64ty, 3)), vm_pc);
     BasicBlock *run_block = BasicBlock::Create(f->getContext(), "RunBlock", f, firstbb);
     BasicBlock *jmp_boring = BasicBlock::Create(f->getContext(), "JmpBoring", f, firstbb);
     BasicBlock *jmp_select = BasicBlock::Create(f->getContext(), "JmpSelect", f, firstbb);
     BasicBlock *defaultCase = BasicBlock::Create(f->getContext(), "Default", f, firstbb);
     BranchInst::Create(vm_entry, defaultCase);
     SwitchInst *switch1 = IRB.CreateSwitch(optype, defaultCase, 0);
-    switch1->addCase(ConstantInt::get(Type::getInt32Ty(f->getContext()), RUN_BLOCK), run_block);
-    switch1->addCase(ConstantInt::get(Type::getInt32Ty(f->getContext()), JMP_BORING), jmp_boring);
-    switch1->addCase(ConstantInt::get(Type::getInt32Ty(f->getContext()), JMP_SELECT), jmp_select);
+    switch1->addCase(ConstantInt::get(type_int64ty, RUN_BLOCK), run_block);
+    switch1->addCase(ConstantInt::get(type_int64ty, JMP_BORING), jmp_boring);
+    switch1->addCase(ConstantInt::get(type_int64ty, JMP_SELECT), jmp_select);
 
     // create run_block's basicblock
     // the first choice
     IRB.SetInsertPoint(run_block);
-    /*
-        std::vector<Constant *> bb_addrs;
-        for(std::vector<BasicBlock *>::iterator b=origBB.begin();b!=origBB.end();b++){
-            BasicBlock *block=*b;
-            bb_addrs.push_back(BlockAddress::get(block));
-        }
-        ArrayType *AT_=ArrayType::get(Type::getInt8PtrTy(f->getContext()),bb_addrs.size());
-        Constant *addr_array=ConstantArray::get(AT_,ArrayRef<Constant*>(bb_addrs));
-        GlobalVariable *address_arr_var=new GlobalVariable(*(f->getParent()),AT_,false,GlobalValue::LinkageTypes::PrivateLinkage,addr_array,"address_table");
-        Value *load=IRB.CreateLoad(IRB.CreateGEP(address_arr_var,{zero,op1}),"address");
-        IndirectBrInst *indirBr=IndirectBrInst::Create(load,bb_addrs.size(),run_block);
-        for(std::vector<BasicBlock *>::iterator b=origBB.begin();b!=origBB.end();b++)
-{
-            BasicBlock *block=*b;
-            indirBr->addDestination(block);
-        }
-    */
+#if 0
+    std::vector<Constant *> bb_addrs;
+    for (std::vector<BasicBlock *>::iterator b = origBB.begin();
+         b != origBB.end(); b++) {
+        BasicBlock *block = *b;
+        bb_addrs.push_back(BlockAddress::get(block));
+    }
+    ArrayType *AT_ =
+        ArrayType::get(Type::getInt8PtrTy(f->getContext()), bb_addrs.size());
+    Constant *addr_array =
+        ConstantArray::get(AT_, ArrayRef<Constant *>(bb_addrs));
+    GlobalVariable *address_arr_var = new GlobalVariable(
+        *(f->getParent()), AT_, false,
+        GlobalValue::LinkageTypes::PrivateLinkage, addr_array, "address_table");
+    auto load_gep =IRB.CreateGEP(address_arr_var->getValueType(),address_arr_var, {zero, op1});
+    Value *load =
+        IRB.CreateLoad(load_gep->getType(),load_gep, "address");
+    IndirectBrInst *indirBr =
+        IndirectBrInst::Create(load, bb_addrs.size(), run_block);
+    for (std::vector<BasicBlock *>::iterator b = origBB.begin();
+         b != origBB.end(); b++) {
+        BasicBlock *block = *b;
+        indirBr->addDestination(block);
+    }
+#endif
     // the seconde choice
     SwitchInst *switch2 = IRB.CreateSwitch(op1, defaultCase, 0);
   errs()<<"the seconde choice start\r\n";
@@ -301,8 +310,8 @@ void DoFlatten(Function *f, int seed) {
         BasicBlock *block = *b;
         block->moveBefore(defaultCase);
         Node *t = findBBNode(block, &all_node);
-        ConstantInt *numCase = cast<ConstantInt>(ConstantInt::get(switch2->getCondition()->getType(), t->value));
-        switch2->addCase(numCase, block);
+        //ConstantInt *numCase = cast<ConstantInt>(ConstantInt::get(switch2->getCondition()->getType(), t->value));
+        switch2->addCase(ConstantInt::get(type_int64ty, t->value), block);
     }
     for (std::vector<BasicBlock *>::iterator b = origBB.begin(); b != origBB.end(); b++) { // Handle successors
         BasicBlock *block = *b;
@@ -314,7 +323,7 @@ void DoFlatten(Function *f, int seed) {
         } else if (block->getTerminator()->getNumSuccessors() == 2){
            // errs() << "\033[1;32mThis block has 2 successors\033[0m\n";
             BranchInst *oldBr = cast<BranchInst>(block->getTerminator());
-            SelectInst *select = SelectInst::Create(oldBr->getCondition(), ConstantInt::get(Type::getInt32Ty(f->getContext()), 1), ConstantInt::get(Type::getInt32Ty(f->getContext()), 0), "", block->getTerminator());
+            SelectInst *select = SelectInst::Create(oldBr->getCondition(), ConstantInt::get(type_int64ty, 1), ConstantInt::get(type_int64ty, 0), "", block->getTerminator());
             new StoreInst(select, vm_flag, block->getTerminator());
             block->getTerminator()->eraseFromParent();
             BranchInst::Create(defaultCase, block);
@@ -330,7 +339,7 @@ void DoFlatten(Function *f, int seed) {
     IRB.SetInsertPoint(jmp_select);
     BasicBlock *select_true = BasicBlock::Create(f->getContext(), "JmpSelectTrue", f, firstbb);
     BasicBlock *select_false = BasicBlock::Create(f->getContext(), "JmpSelectFalse", f, firstbb);
-    IRB.CreateCondBr(IRB.CreateICmpEQ(IRB.CreateLoad(vm_flag->getAllocatedType(),vm_flag), ConstantInt::get(Type::getInt32Ty(f->getContext()), 1)), select_true, select_false);
+    IRB.CreateCondBr(IRB.CreateICmpEQ(IRB.CreateLoad(vm_flag->getAllocatedType(),vm_flag), ConstantInt::get(type_int64ty, 1)), select_true, select_false);
     IRB.SetInsertPoint(select_true);
     IRB.CreateStore(op1, vm_pc);
     IRB.CreateBr(vm_entry);
@@ -338,12 +347,14 @@ void DoFlatten(Function *f, int seed) {
     IRB.CreateStore(op2, vm_pc);
     IRB.CreateBr(vm_entry);
 
+    //fixStack()
     std::vector<PHINode *> tmpPhi;
     std::vector<Instruction *> tmpReg;
     BasicBlock *bbEntry = &*f->begin();
 #if 1
    errs()<<"the PHI start\r\n";
     do{
+      errs()<<"Fix Stack\r\n";
         tmpPhi.clear();
         tmpReg.clear();
         for (Function::iterator i = f->begin(); i != f->end(); i++){
@@ -360,10 +371,10 @@ void DoFlatten(Function *f, int seed) {
             }
         }
         for (unsigned int i = 0; i < tmpReg.size(); i++){
-            DemoteRegToStack(*tmpReg.at(i),true,f->begin()->getTerminator());
+            DemoteRegToStack(*tmpReg.at(i));
         }
         for (unsigned int i = 0; i < tmpPhi.size(); i++){
-            DemotePHIToStack(tmpPhi.at(i), f->begin()->getTerminator());
+            DemotePHIToStack(tmpPhi.at(i));
         }
     } while (tmpReg.size() != 0 || tmpPhi.size() != 0);
    errs()<<"PHI end\r\n";
@@ -381,6 +392,8 @@ PreservedAnalyses VmFlatObfuscationPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
 
   if (toObfuscate(RunVmFlatObfuscationPass, &F, "vm-fla")) {
+    LowerSwitchPass lower;
+    lower.run(F, AM);
     if (runVmFlaOnFunction(F))
       return PreservedAnalyses::none();
   }
