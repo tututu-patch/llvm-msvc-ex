@@ -3,7 +3,27 @@
 
 ### add Something for ollvm
 ```
-Original obfuscation passes including bogus control flow (-bcf), split basic block (-split), control flow flattening (-fla) and substitution (-sub) and (-mba-subs) and (-ind-call) and (-string-obfus) and (-const-obfus).
+Original obfuscation passes including bogus control flow (-bcf), split basic block (-split), control flow flattening (-fla) and substitution (-sub) and MBA-substitution(-mba-subs) and Indirect-Call(-ind-call) and StringXor(-string-obfus) and ConstVarXor(-const-obfus) and VM-Flattening (-vm-fla).
+``` 
+
+### 感谢
+```
+https://github.com/gmh5225, 日天同学的llvm-msvc让人心情激动
+
+```
+### 参考
+```
+https://github.com/KomiMoe/Arkari/tree/llvm-17.x
+https://github.com/AimiP02/BronyaObfus
+https://github.com/za233/LLVMMyPass
+https://github.com/DreamSoule/ollvm17
+https://github.com/wwh1004/ollvm-16
+```
+
+### 计划
+```
+正在移植xVMP
+FLA与Const-Obfus冲突崩溃问题
 ```
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -66,7 +86,7 @@ Add To VS Project Compiler Cmdline
 -mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -fla
 ```
 ```
--mllvm -string-obfus -mllvm -ind-call -mllvm -mba-subs -mllvm -mba-prob=20 -mllvm -const-obfus -mllvm -const-glb -mllvm -data-obfus -mllvm -mba-prob=20
+-mllvm -vm-fla -mllvm -mba-subs -mllvm -string-obfus -mllvm -ind-call -mllvm -data-obfus -mllvm -const-obfus -mllvm -const-glb -mllvm -sub -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_prob=40 
 ```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice
