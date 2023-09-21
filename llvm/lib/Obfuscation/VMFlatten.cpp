@@ -392,8 +392,8 @@ PreservedAnalyses VmFlatObfuscationPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
 
   if (toObfuscate(RunVmFlatObfuscationPass, &F, "vm-fla")) {
-    LowerSwitchPass lower;
-    lower.run(F, AM);
+    //LowerSwitchPass lower;
+    //lower.run(F, AM);
     if (runVmFlaOnFunction(F))
       return PreservedAnalyses::none();
   }
