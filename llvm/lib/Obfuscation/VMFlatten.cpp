@@ -347,36 +347,37 @@ void DoFlatten(Function *f, int seed) {
     IRB.CreateStore(op2, vm_pc);
     IRB.CreateBr(vm_entry);
 
-    //fixStack()
-    std::vector<PHINode *> tmpPhi;
-    std::vector<Instruction *> tmpReg;
-    BasicBlock *bbEntry = &*f->begin();
-#if 1
+    fixStack(*f,false);
+    //std::vector<PHINode *> tmpPhi;
+    //std::vector<Instruction *> tmpReg;
+    //BasicBlock *bbEntry = &*f->begin();
+#if 0
    errs()<<"the PHI start\r\n";
-    do{
-      errs()<<"Fix Stack\r\n";
-        tmpPhi.clear();
-        tmpReg.clear();
-        for (Function::iterator i = f->begin(); i != f->end(); i++){
-            for (BasicBlock::iterator j = i->begin(); j != i->end(); j++){
-                if (isa<PHINode>(j)){
-                    PHINode *phi = cast<PHINode>(j);
-                    tmpPhi.push_back(phi);
-                    continue;
-                }
-                if (!(isa<AllocaInst>(j) && j->getParent() == bbEntry) && (valueEscapes(&*j) || j->isUsedOutsideOfBlock(&*i))){
-                    tmpReg.push_back(&*j);
-                    continue;
-                }
-            }
-        }
-        for (unsigned int i = 0; i < tmpReg.size(); i++){
-            DemoteRegToStack(*tmpReg.at(i));
-        }
-        for (unsigned int i = 0; i < tmpPhi.size(); i++){
-            DemotePHIToStack(tmpPhi.at(i));
-        }
-    } while (tmpReg.size() != 0 || tmpPhi.size() != 0);
+
+    //do{
+    //  errs()<<"Fix Stack\r\n";
+    //    tmpPhi.clear();
+    //    tmpReg.clear();
+    //    for (Function::iterator i = f->begin(); i != f->end(); i++){
+    //        for (BasicBlock::iterator j = i->begin(); j != i->end(); j++){
+    //            if (isa<PHINode>(j)){
+    //                PHINode *phi = cast<PHINode>(j);
+    //                tmpPhi.push_back(phi);
+    //                continue;
+    //            }
+    //            if (!(isa<AllocaInst>(j) && j->getParent() == bbEntry) && (valueEscapes(&*j) || j->isUsedOutsideOfBlock(&*i))){
+    //                tmpReg.push_back(&*j);
+    //                continue;
+    //            }
+    //        }
+    //    }
+    //    for (unsigned int i = 0; i < tmpReg.size(); i++){
+    //        DemoteRegToStack(*tmpReg.at(i));
+    //    }
+    //    for (unsigned int i = 0; i < tmpPhi.size(); i++){
+    //        DemotePHIToStack(tmpPhi.at(i));
+    //    }
+    //} while (tmpReg.size() != 0 || tmpPhi.size() != 0);
    errs()<<"PHI end\r\n";
 #endif
 

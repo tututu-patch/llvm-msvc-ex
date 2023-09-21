@@ -106,6 +106,68 @@ bool toObfuscate(bool flag, Function *f, std::string attribute) {
   return false;
 }
 
+bool valueEscapes(const Instruction &Inst) {
+  if (!Inst.getType()->isSized())
+    return false;
+
+  const BasicBlock *bb = Inst.getParent();
+  for (const User *u : Inst.users()) {
+    auto ui = cast<Instruction>(u);
+    if (ui->getParent() != bb || isa<PHINode>(ui))
+      return true;
+  }
+  return false;
+}
+void fixStack(Function &F,bool use_alloc) {
+  // Try to remove phi node and demote reg to stack
+  // Try to remove phi node and demote reg to stack
+  std::vector<PHINode *> tmpPhi;
+  std::vector<Instruction *> tmpReg;
+  BasicBlock *bbEntry = &*F.begin();
+  // Find first non-alloca instruction and create insertion point. This is
+  // safe if block is well-formed: it always have terminator, otherwise
+  // we'll get and assertion.
+  BasicBlock::iterator I = bbEntry->begin();
+  while (isa<AllocaInst>(I))
+    ++I;
+  Instruction *AllocaInsertionPoint = &*I;
+  do {
+    tmpPhi.clear();
+    tmpReg.clear();
+    for (BasicBlock &i : F) {
+      for (Instruction &j : i) {
+        if (isa<PHINode>(&j)) {
+          PHINode *phi = cast<PHINode>(&j);
+          tmpPhi.emplace_back(phi);
+          continue;
+        }
+        if (!(isa<AllocaInst>(&j) && j.getParent() == bbEntry) &&
+            (valueEscapes(j) || j.isUsedOutsideOfBlock(&i))) {
+          tmpReg.emplace_back(&j);
+          continue;
+        }
+      }
+    }
+    for (Instruction *I : tmpReg)
+      if(use_alloc)
+          DemoteRegToStack(*I, false, AllocaInsertionPoint);
+      else
+          DemoteRegToStack(*I);
+
+    for (PHINode *P : tmpPhi)
+      if(use_alloc )DemotePHIToStack(P, AllocaInsertionPoint);
+      else DemotePHIToStack(P);
+  } while (tmpReg.size() != 0 || tmpPhi.size() != 0);
+}
+
+void OutputIR(Function &Func) {
+  for (auto &BB : Func) {
+    for (auto &Inst : BB) {
+      Inst.print(errs());
+      errs() << "\n";
+    }
+  }
+}
 
 void LowerConstantExpr(Function &F) {
   SmallPtrSet<Instruction *, 8> WorkList;

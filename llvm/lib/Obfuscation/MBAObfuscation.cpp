@@ -315,14 +315,7 @@ void substituteConstant(Instruction *Inst, int i) {
   }
 }
 
-void OutputIR(Function *Func) {
-  for (auto &BB : *Func) {
-    for (auto &Inst : BB) {
-      Inst.print(errs());
-      errs() << "\n";
-    }
-  }
-}
+
 
 bool runMBAObfuscation(Function &F) {
   if (std::string FuncName = F.getName().str();

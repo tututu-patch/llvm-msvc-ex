@@ -22,8 +22,10 @@ https://github.com/wwh1004/ollvm-16
 
 ### 计划
 ```
-正在移植xVMP
-FLA与Const-Obfus冲突崩溃问题
+data-obfus 崩溃问题(目测与传统OLLVM冲突)
+const-obfus 崩溃问题(FixStack后正常了)
+vm-fla和传统ollvm冲突(待研究)
+移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
 ```
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -80,13 +82,14 @@ cmake .. -G "Visual Studio 17 2022" -A X64 -DLLVM_ENABLE_PROJECTS="clang;lld" -D
 msbuild /m -p:Configuration=release INSTALL.vcxproj 
 ```
 
-### Example
+### 混淆例子
 Add To VS Project Compiler Cmdline
 ```
--mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=3 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -fla
+-mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -fla -mllvm -mba-subs
 ```
+#### 需要修改载研究的部分
 ```
--mllvm -vm-fla -mllvm -mba-subs -mllvm -string-obfus -mllvm -ind-call -mllvm -data-obfus -mllvm -const-obfus -mllvm -const-glb -mllvm -sub -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_prob=40 
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -const-glb -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -mba-subs
 ```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice

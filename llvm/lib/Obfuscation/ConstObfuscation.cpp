@@ -50,6 +50,7 @@ struct ConstEncryption {
   ConstEncryption() = default;
   void handleInstruction2(Function *f, Instruction *ii, unsigned int &count,std::string m_name) {
     int pos = 0;
+    //errs()<<m_name<<"\r\n";
     std::vector<Pair *> updates;
     for (User::op_iterator opi = ii->op_begin(); opi != ii->op_end();
          opi++, pos++) {
@@ -63,6 +64,9 @@ struct ConstEncryption {
         Type *int32ty = Type::getInt32Ty(f->getContext());
         Type *int64ty = Type::getInt64Ty(f->getContext());
         std::string name = "global_const" + m_name +std::to_string(count);
+        /*errs()<<name<<"\r\n";
+        ii->print(errs());
+        errs() << "\r\n";*/
         if (consts->getType() == int8ty) {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           unsigned char data = (consts->getValue().getZExtValue()) & 0xFF;
@@ -252,25 +256,38 @@ struct ConstEncryption {
       //printf"%s\r\n",func.getName().data());
       std::vector<Instruction *> instr_list;
       for (BasicBlock &bb : func)
-        for (Instruction &ii : bb) {
-          for (User::op_iterator opi = ii.op_begin(); opi != ii.op_end();
-               opi++) {
-            Value *v = *opi;
-            if (isa<ConstantInt>(*v)) {
-              instr_list.push_back(&ii);
-              break;
+      {
+        for (Instruction &ii : bb) 
+        {
+          auto BI = cast<BinaryOperator>(&ii);
+          auto opcode = BI->getOpcode();
+          //errs()<<"op = "<<opcode<<"\r\n";
+          {
+            for (User::op_iterator opi = ii.op_begin(); opi != ii.op_end();
+                 opi++) 
+            {
+              Value *v = *opi;
+              if (isa<ConstantInt>(*v)) 
+              {
+                //errs()<<"op = "<<opcode<<"\r\n";
+                instr_list.push_back(&ii);
+                break;
+              }
             }
           }
         }
+      }
       for (const auto &iter : instr_list) {
         if (ConstUseGlobal) {
             //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
-            handleInstruction2(&func,iter,count,M->getName().data());
+            handleInstruction2(&func,iter,count,M->getName().str());
         } else {
           //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
           handleInstruction1(&func, iter, count);
         }
+        //
       }
+      fixStack(func,true);
     }
   }
 

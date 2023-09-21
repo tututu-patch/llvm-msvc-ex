@@ -38,55 +38,6 @@ cl::opt<bool> Flattening("fla", cl::init(false),
                          cl::desc("Enable the flattening pass"));
 
 // Shamefully borrowed from ../Scalar/RegToMem.cpp :(
-bool valueEscapes(const Instruction &Inst) {
-  if (!Inst.getType()->isSized())
-    return false;
-
-  const BasicBlock *BB = Inst.getParent();
-  for (const User *U : Inst.users()) {
-    const Instruction *UI = cast<Instruction>(U);
-    if (UI->getParent() != BB || isa<PHINode>(UI))
-      return true;
-  }
-  return false;
-}
-
-void fixStack(Function &F) {
-  // Try to remove phi node and demote reg to stack
-  std::vector<PHINode *> tmpPhi;
-  std::vector<Instruction *> tmpReg;
-  BasicBlock *bbEntry = &*F.begin();
-
-  do {
-    tmpPhi.clear();
-    tmpReg.clear();
-
-    for (Function::iterator i = F.begin(); i != F.end(); ++i) {
-
-      for (BasicBlock::iterator j = i->begin(); j != i->end(); ++j) {
-
-        if (isa<PHINode>(j)) {
-          PHINode *phi = cast<PHINode>(j);
-          tmpPhi.push_back(phi);
-          continue;
-        }
-        if (!(isa<AllocaInst>(j) && j->getParent() == bbEntry) &&
-            (valueEscapes(*j) || j->isUsedOutsideOfBlock(&*i))) {
-          tmpReg.push_back(&*j);
-          continue;
-        }
-      }
-    }
-    for (unsigned int i = 0; i != tmpReg.size(); ++i) {
-      DemoteRegToStack(*tmpReg.at(i));
-    }
-
-    for (unsigned int i = 0; i != tmpPhi.size(); ++i) {
-      DemotePHIToStack(tmpPhi.at(i));
-    }
-
-  } while (tmpReg.size() != 0 || tmpPhi.size() != 0);
-}
 
 bool flatten(Function &F) {
   vector<BasicBlock *> origBB;
@@ -268,7 +219,7 @@ bool flatten(Function &F) {
     }
   }
 
-  fixStack(F);
+  fixStack(F,false);
 
   return true;
 }
