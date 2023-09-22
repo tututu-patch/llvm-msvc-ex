@@ -23,8 +23,8 @@ https://github.com/wwh1004/ollvm-16
 ### 计划
 ```
 data-obfus 崩溃问题(目测与传统OLLVM冲突)
-const-obfus 崩溃问题(FixStack后正常了)
-vm-fla和传统ollvm冲突(待研究)
+const-obfus 崩溃问题(目测与传统OLLVM冲突)
+vm-fla和传统ollvm冲突
 移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
 ```
 
