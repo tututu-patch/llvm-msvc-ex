@@ -1955,12 +1955,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Add default section merging rules after user rules. User rules take
   // precedence, but we will emit a warning if there is a conflict.
-  parseMerge(".idata=.rdata");
+  if (config->driver)
+    parseMerge(".idata=INIT");
+  else
+    parseMerge(".idata=.rdata");
   parseMerge(".didat=.rdata");
   parseMerge(".edata=.rdata");
   parseMerge(".xdata=.rdata");
   parseMerge(".00cfg=.rdata");
-  parseMerge(".retplne=.rdata");
   parseMerge(".voltbl=.rdata");
   parseMerge("newworld=.rdata");
   parseMerge(".bss=.data");
