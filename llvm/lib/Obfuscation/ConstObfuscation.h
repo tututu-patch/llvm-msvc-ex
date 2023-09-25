@@ -9,7 +9,7 @@ namespace llvm {
 
 class ConstObfuscationPass : public PassInfoMixin<ConstObfuscationPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

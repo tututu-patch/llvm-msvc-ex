@@ -85,11 +85,11 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 ### 混淆例子
 Add To VS Project Compiler Cmdline
 ```
--mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -string-obfus -mllvm -ind-call -mllvm -fla -mllvm -mba-subs
+-mllvm -const-obfus -mllvm -mba-subs -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 
 ```
 #### 需要修改载研究的部分
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -const-glb -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -mba-subs
+-mllvm -data-obfus
 ```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice

@@ -34,7 +34,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,
                                               OptimizationLevel Level) {
 
-          MPM.addPass(ConstObfuscationPass());
+          MPM.addPass(createModuleToFunctionPassAdaptor(ConstObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
