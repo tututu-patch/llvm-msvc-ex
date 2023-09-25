@@ -75,7 +75,7 @@ struct VMFlat {
   Node *findBBNode(const BasicBlock *bb, const std::vector<Node *> *all_node);
 
   void dump_inst(const std::vector<VMInst *> *all_inst) const;
-  void DoFlatten(Function *f, int seed);
+  bool DoFlatten(Function *f, int seed);
   bool runVmFlaOnFunction(Function &function);
 };
 
@@ -177,13 +177,13 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
   }
 }
 
-void VMFlat::DoFlatten(Function *f, int seed) {
+bool VMFlat::DoFlatten(Function *f, int seed) {
   //errs() << f->getName().data() << "\r\n";
 
   std::vector<BasicBlock *> orig_bb;
   getBlocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    return;
+    return false;
   }
   //errs() << "Count 1 = " << origBB.size() << "\r\n";
   // unsigned int rand_val = seed;
@@ -431,6 +431,7 @@ void VMFlat::DoFlatten(Function *f, int seed) {
     //} while (tmpReg.size() != 0 || tmpPhi.size() != 0);
    //errs()<<"PHI end\r\n";
 #endif
+  return true;
 }
 
 bool VMFlat::runVmFlaOnFunction(Function &function) {
@@ -438,7 +439,8 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   RUN_BLOCK = cryptoutils->get_uint32_t();
   JMP_BORING = RUN_BLOCK+1;
   JMP_SELECT = RUN_BLOCK+2;
-  DoFlatten(&function, static_cast<int>(cryptoutils->get_uint32_t()));
+  if(DoFlatten(&function, static_cast<int>(cryptoutils->get_uint32_t())))
+    turnOffOptimization(&function);
   // DoSplit(&function,4);
   return true;
 }

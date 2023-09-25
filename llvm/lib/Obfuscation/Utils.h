@@ -8,5 +8,6 @@ bool toObfuscate(bool flag, llvm::Function *f, std::string attribute);
 void LowerConstantExpr(llvm::Function &F);
 void fixStack(llvm::Function &F,bool use_alloc);
 void OutputIR(llvm::Function &Func);
+void turnOffOptimization(llvm::Function *f);
 
 #endif

@@ -11,6 +11,16 @@
 
 using namespace llvm;
 
+void turnOffOptimization(Function *f) {
+  f->removeFnAttr(Attribute::AttrKind::MinSize);
+  f->removeFnAttr(Attribute::AttrKind::OptimizeForSize);
+  if (!f->hasFnAttribute(Attribute::AttrKind::OptimizeNone)) {
+    f->addFnAttr(Attribute::AttrKind::OptimizeNone);
+    f->addFnAttr(Attribute::AttrKind::NoInline);
+  }
+}
+
+
 std::string readAnnotate(Function *f) {
   std::string annotation = "";
 
