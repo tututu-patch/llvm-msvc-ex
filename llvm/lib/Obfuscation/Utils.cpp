@@ -14,6 +14,8 @@ using namespace llvm;
 void turnOffOptimization(Function *f) {
   f->removeFnAttr(Attribute::AttrKind::MinSize);
   f->removeFnAttr(Attribute::AttrKind::OptimizeForSize);
+  //f->removeFnAttr(Attribute::HasSEH);
+  //f->removeFnAttr(Attribute::HasCXXSEH);
   if (!f->hasFnAttribute(Attribute::AttrKind::OptimizeNone)) {
     f->addFnAttr(Attribute::AttrKind::OptimizeNone);
     f->addFnAttr(Attribute::AttrKind::NoInline);

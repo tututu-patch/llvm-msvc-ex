@@ -335,7 +335,7 @@ bool runMBAObfuscation(Function &F) {
     return false;
   }
 
-  outs() << "Start MBASubstitute Pass.\n";
+  //outs() << "Start MBASubstitute Pass.\n";
 
   for (int i = 0; i < ObfuTimes; i++) {
     // outs() << "Times: " << i << "\n";
@@ -381,7 +381,7 @@ bool runMBAObfuscation(Function &F) {
 
   // OutputIR(&F);
 
-  outs() << "Finished MBASubstitute Pass.\n";
+  //outs() << "Finished MBASubstitute Pass.\n";
 
   return true;
 }

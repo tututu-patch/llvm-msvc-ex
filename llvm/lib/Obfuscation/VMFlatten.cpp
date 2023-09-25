@@ -184,14 +184,16 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 }
 
 bool VMFlat::DoFlatten(Function *f, int seed) {
-  // errs() << f->getName().data() << "\r\n";
+  //errs() << f->getName().data() << "\r\n";
+
+  
   std::string new_name_pre = std::to_string(seed);
   std::vector<BasicBlock *> orig_bb;
   getBlocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
     return false;
   }
-  // errs() << "Count 1 = " << origBB.size() << "\r\n";
+  //errs() << "Count 1 = " << orig_bb.size() << "\r\n";
   //  unsigned int rand_val = seed;
   auto tmp = f->begin();
   BasicBlock *old_entry = &*tmp;
@@ -224,7 +226,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     tmp1->data = i;
   }
 
-  // errs() << "Count = " << all_node.size() << "\r\n";
+  //errs() << "Count = " << all_node.size() << "\r\n";
 
   for (auto i = all_node.begin(); i != all_node.end(); ++i) {
     Node *tmp = *i;
@@ -251,10 +253,10 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   std::vector<VMInst *> all_inst;
   std::map<Node *, unsigned int> inst_map;
   fake->bb1 = start;
-  // errs() << "begin gen ins\r\n";
+  //errs() << "begin gen ins\r\n";
   gen_inst(&all_inst, &inst_map, fake);
-  // errs() << "end gen ins\r\n";
-  dump_inst(&all_inst);
+  //errs() << "end gen ins\r\n";
+  //dump_inst(&all_inst);
   std::vector<Constant *> opcodes;
   [[maybe_unused]] auto type_int32ty = Type::getInt32Ty(f->getContext());
   auto type_int64ty = Type::getInt64Ty(f->getContext());
@@ -263,7 +265,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     opcodes.push_back(ConstantInt::get(type_int64ty, inst->op1));
     opcodes.push_back(ConstantInt::get(type_int64ty, inst->op2));
   }
-  // errs() << "inst ok\r\n";
+  //errs() << "inst ok\r\n";
 
   ArrayType *at = ArrayType::get(type_int64ty, opcodes.size());
   Constant *opcode_array =
@@ -278,7 +280,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   new StoreInst(init_pc, vm_pc, old_entry);
   auto vm_flag = new AllocaInst(type_int64ty, 0, Twine(new_name_pre+"VMJmpFlag"), old_entry);
   BasicBlock *vm_entry =
-      BasicBlock::Create(f->getContext(), new_name_pre+"VMEntry", f, firstbb);
+      BasicBlock::Create(f->getContext(), Twine(new_name_pre+"VMEntry"), f, firstbb);
 
   BranchInst::Create(vm_entry, old_entry);
   IRBuilder<> IRB(vm_entry);
@@ -350,7 +352,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
 #endif
   // the seconde choice
   SwitchInst *switch2 = IRB.CreateSwitch(op1, defaultCase, 0);
-  // errs() << "the seconde choice start\r\n";
+  //errs() << "the seconde choice start\r\n";
   for (std::vector<BasicBlock *>::iterator b = orig_bb.begin();
        b != orig_bb.end(); b++) {
     BasicBlock *block = *b;
@@ -363,13 +365,13 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   }
   for (auto block : orig_bb) { // Handle successors
     if (block->getTerminator()->getNumSuccessors() == 1) {
-      //  //errs() << "\033[1;32mThis block has 1 successor\033[0m\n";
+      //  ////errs() << "\033[1;32mThis block has 1 successor\033[0m\n";
       [[maybe_unused]] BasicBlock *succ =
           block->getTerminator()->getSuccessor(0);
       block->getTerminator()->eraseFromParent();
       BranchInst::Create(defaultCase, block);
     } else if (block->getTerminator()->getNumSuccessors() == 2) {
-      // //errs() << "\033[1;32mThis block has 2 successors\033[0m\n";
+      // ////errs() << "\033[1;32mThis block has 2 successors\033[0m\n";
       auto old_br = cast<BranchInst>(block->getTerminator());
       SelectInst *select = SelectInst::Create(
           old_br->getCondition(), ConstantInt::get(type_int64ty, 1),
@@ -381,7 +383,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
       continue;
     }
   }
-  // errs() << "the seconde choice end\r\n";
+  //errs() << "the seconde choice end\r\n";
   IRB.SetInsertPoint(jmp_boring);
   IRB.CreateStore(op1, vm_pc);
   IRB.CreateBr(vm_entry);
@@ -407,10 +409,10 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   // std::vector<Instruction *> tmpReg;
   // BasicBlock *bbEntry = &*f->begin();
 #if 0
-   //errs()<<"the PHI start\r\n";
+   ////errs()<<"the PHI start\r\n";
 
     //do{
-    //  //errs()<<"Fix Stack\r\n";
+    //  ////errs()<<"Fix Stack\r\n";
     //    tmpPhi.clear();
     //    tmpReg.clear();
     //    for (Function::iterator i = f->begin(); i != f->end(); i++){
@@ -433,7 +435,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     //        DemotePHIToStack(tmpPhi.at(i));
     //    }
     //} while (tmpReg.size() != 0 || tmpPhi.size() != 0);
-   //errs()<<"PHI end\r\n";
+   ////errs()<<"PHI end\r\n";
 #endif
   return true;
 }
@@ -442,8 +444,18 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
 
 
   if (!((VmObfuProbRate > 0) && (VmObfuProbRate <= 100))) {
-    errs() << "VmFlattenObfuscationPass application basic blocks percentage "
+    //errs() << "VmFlattenObfuscationPass application basic blocks percentage "
               "-vm_prob=x must be 0 < x <= 100";
+    return false;
+  }
+
+  if(function.getName().startswith("??")) {
+    return false;
+  }
+  if(function.getName().contains("std@")) {
+    return false;
+  }
+  if(function.hasCXXEH()||function.hasCXXSEH()) {
     return false;
   }
 
