@@ -780,7 +780,10 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // Determine to which section this global should be emitted.
   MCSection *TheSection = getObjFileLowering().SectionForGlobal(GV, GVKind, TM);
-
+  if (GV->getParent() && GV->getParent()->getModuleFlag("ms-kernel") &&
+      GV->isConstant() && TM.getTargetTriple().isOSBinFormatCOFF())
+    TheSection = LLVMMSVCCOFFSection;
+    
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
   if (GVKind.isBSS() && MAI->hasMachoZeroFillDirective() &&
@@ -2514,7 +2517,12 @@ void AsmPrinter::emitConstantPool() {
 
     MCSection *S = getObjFileLowering().getSectionForConstant(
         getDataLayout(), Kind, C, Alignment);
-
+    // Handle mergeable constants in windows driver.
+    if (Kind.isMergeableConst() && MF->getFunction().getParent() &&
+        MF->getFunction().getParent()->getModuleFlag("ms-kernel") &&
+        TM.getTargetTriple().isOSBinFormatCOFF())
+      S = LLVMMSVCCOFFSection;
+      
     // The number of sections are small, just do a linear search from the
     // last section to the first.
     bool Found = false;
