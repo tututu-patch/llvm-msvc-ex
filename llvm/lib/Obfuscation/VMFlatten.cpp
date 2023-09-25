@@ -42,9 +42,6 @@ using namespace llvm;
 static cl::opt<bool>
     RunVmFlatObfuscationPass("vm-fla", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass"));
-static cl::opt<int> VmFlatObfTimes(
-    "vm-times", cl::init(1),
-    cl::desc("Run VmFlattenObfuscationPass pass <mba-times> time(s)"));
 
 static cl::opt<int> VmObfuProbRate(
     "vm-prob", cl::init(100),
@@ -188,7 +185,7 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 
 bool VMFlat::DoFlatten(Function *f, int seed) {
   // errs() << f->getName().data() << "\r\n";
-
+  std::string new_name_pre = std::to_string(seed);
   std::vector<BasicBlock *> orig_bb;
   getBlocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
@@ -212,7 +209,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     if (old_entry->size() > 1) {
       --iter;
     }
-    BasicBlock *splited = old_entry->splitBasicBlock(iter, Twine("FirstBB"));
+    BasicBlock *splited = old_entry->splitBasicBlock(iter, Twine(new_name_pre+"FirstBB"));
     firstbb = splited;
     orig_bb.insert(orig_bb.begin(), splited);
   }
@@ -273,15 +270,15 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
       ConstantArray::get(at, ArrayRef<Constant *>(opcodes));
   auto oparr_var = new GlobalVariable(*(f->getParent()), at, false,
                                       GlobalValue::LinkageTypes::PrivateLinkage,
-                                      opcode_array, "opcodes");
+                                      opcode_array, new_name_pre+"opcodes");
   // 去除第一个基本块末尾的跳转
   old_entry->getTerminator()->eraseFromParent();
-  auto vm_pc = new AllocaInst(type_int64ty, 0, Twine("VMpc"), old_entry);
+  auto vm_pc = new AllocaInst(type_int64ty, 0, Twine(new_name_pre+"VMpc"), old_entry);
   ConstantInt *init_pc = ConstantInt::get(type_int64ty, 0);
   new StoreInst(init_pc, vm_pc, old_entry);
-  auto vm_flag = new AllocaInst(type_int64ty, 0, Twine("VMJmpFlag"), old_entry);
+  auto vm_flag = new AllocaInst(type_int64ty, 0, Twine(new_name_pre+"VMJmpFlag"), old_entry);
   BasicBlock *vm_entry =
-      BasicBlock::Create(f->getContext(), "VMEntry", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"VMEntry", f, firstbb);
 
   BranchInst::Create(vm_entry, old_entry);
   IRBuilder<> IRB(vm_entry);
@@ -310,13 +307,13 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
                     ConstantInt::get(type_int64ty, 3)),
       vm_pc);
   BasicBlock *run_block =
-      BasicBlock::Create(f->getContext(), "RunBlock", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"RunBlock", f, firstbb);
   BasicBlock *jmp_boring =
-      BasicBlock::Create(f->getContext(), "JmpBoring", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"JmpBoring", f, firstbb);
   BasicBlock *jmp_select =
-      BasicBlock::Create(f->getContext(), "JmpSelect", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"JmpSelect", f, firstbb);
   BasicBlock *defaultCase =
-      BasicBlock::Create(f->getContext(), "Default", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"Default", f, firstbb);
   BranchInst::Create(vm_entry, defaultCase);
   SwitchInst *switch1 = IRB.CreateSwitch(optype, defaultCase, 0);
   switch1->addCase(ConstantInt::get(type_int64ty, RUN_BLOCK), run_block);
@@ -391,9 +388,9 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
 
   IRB.SetInsertPoint(jmp_select);
   BasicBlock *select_true =
-      BasicBlock::Create(f->getContext(), "JmpSelectTrue", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"JmpSelectTrue", f, firstbb);
   BasicBlock *select_false =
-      BasicBlock::Create(f->getContext(), "JmpSelectFalse", f, firstbb);
+      BasicBlock::Create(f->getContext(), new_name_pre+"JmpSelectFalse", f, firstbb);
   IRB.CreateCondBr(
       IRB.CreateICmpEQ(IRB.CreateLoad(vm_flag->getAllocatedType(), vm_flag),
                        ConstantInt::get(type_int64ty, 1)),
@@ -443,12 +440,6 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
 
 bool VMFlat::runVmFlaOnFunction(Function &function) {
 
-  if (VmFlatObfTimes <= 0) {
-    errs()
-        << "VmFlattenObfuscationPass application number -vm_times=x must be x >"
-           " 0";
-    return false;
-  }
 
   if (!((VmObfuProbRate > 0) && (VmObfuProbRate <= 100))) {
     errs() << "VmFlattenObfuscationPass application basic blocks percentage "
@@ -457,7 +448,6 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   }
 
   bool changed = false;
-  for (auto i = 0; i < VmFlatObfTimes; i++) {
     RUN_BLOCK = cryptoutils->get_uint32_t();
     JMP_BORING = RUN_BLOCK + 1;
     JMP_SELECT = RUN_BLOCK + 2;
@@ -465,7 +455,6 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
       changed |=
           DoFlatten(&function, static_cast<int>(cryptoutils->get_uint32_t()));
     }
-  }
   if (changed)
     turnOffOptimization(&function);
   // DoSplit(&function,4);
