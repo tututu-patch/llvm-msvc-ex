@@ -42,6 +42,14 @@ using namespace llvm;
 static cl::opt<bool>
     RunVmFlatObfuscationPass("vm-fla", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass"));
+static cl::opt<int> VmFlatObfTimes(
+    "vm-times", cl::init(1),
+    cl::desc("Run VmFlattenObfuscationPass pass <mba-times> time(s)"));
+
+static cl::opt<int> VmObfuProbRate(
+    "vm-prob", cl::init(100),
+    cl::desc("Choose the probability <vm-prob> for each basic blocks will "
+             "be obfuscated by VmFlattenObfuscationPass"));
 
 namespace {
 struct VMFlat {
@@ -79,8 +87,8 @@ struct VMFlat {
   bool runVmFlaOnFunction(Function &function);
 };
 
-std::vector<BasicBlock *> * VMFlat::getBlocks(Function *function,
-    std::vector<BasicBlock *> *lists) {
+std::vector<BasicBlock *> *VMFlat::getBlocks(Function *function,
+                                             std::vector<BasicBlock *> *lists) {
   lists->clear();
   for (BasicBlock &basicBlock : *function)
     lists->push_back(&basicBlock);
@@ -103,14 +111,14 @@ unsigned VMFlat::getUniqueNumber(const std::vector<unsigned> *rand_list) {
   return num;
 }
 
-VMFlat::Node * VMFlat::newNode(unsigned value) {
+VMFlat::Node *VMFlat::newNode(unsigned value) {
   const auto node = static_cast<Node *>(malloc(sizeof(Node)));
   node->value = value;
   node->bb1 = node->bb2 = nullptr;
   return node;
 }
 
-VMFlat::VMInst * VMFlat::newInst(unsigned type, unsigned op1, unsigned op2) {
+VMFlat::VMInst *VMFlat::newInst(unsigned type, unsigned op1, unsigned op2) {
   const auto code = static_cast<VMInst *>(malloc(sizeof(VMInst)));
   code->type = type;
   code->op1 = op1;
@@ -119,7 +127,8 @@ VMFlat::VMInst * VMFlat::newInst(unsigned type, unsigned op1, unsigned op2) {
 }
 
 void VMFlat::create_node_inst(std::vector<VMInst *> *all_inst,
-    std::map<Node *, unsigned> *inst_map, Node *node) {
+                              std::map<Node *, unsigned> *inst_map,
+                              Node *node) {
   VMInst *code = newInst(RUN_BLOCK, node->value, 0);
   all_inst->push_back(code);
   inst_map->insert(
@@ -127,7 +136,7 @@ void VMFlat::create_node_inst(std::vector<VMInst *> *all_inst,
 }
 
 void VMFlat::gen_inst(std::vector<VMInst *> *all_inst,
-    std::map<Node *, unsigned> *inst_map, const Node *node) {
+                      std::map<Node *, unsigned> *inst_map, const Node *node) {
   // assert(!(node->bb1==NULL && node->bb2!=NULL));
   if (node->bb1 != nullptr && node->bb2 == nullptr) {
     if (inst_map->count(node->bb1) == 0) {
@@ -155,8 +164,8 @@ void VMFlat::gen_inst(std::vector<VMInst *> *all_inst,
     return;
 }
 
-VMFlat::Node * VMFlat::
-findBBNode(const BasicBlock *bb, const std::vector<Node *> *all_node) {
+VMFlat::Node *VMFlat::findBBNode(const BasicBlock *bb,
+                                 const std::vector<Node *> *all_node) {
   for (const auto &i : *all_node) {
     if (bb == i->data)
       return i;
@@ -178,15 +187,15 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 }
 
 bool VMFlat::DoFlatten(Function *f, int seed) {
-  //errs() << f->getName().data() << "\r\n";
+  // errs() << f->getName().data() << "\r\n";
 
   std::vector<BasicBlock *> orig_bb;
   getBlocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
     return false;
   }
-  //errs() << "Count 1 = " << origBB.size() << "\r\n";
-  // unsigned int rand_val = seed;
+  // errs() << "Count 1 = " << origBB.size() << "\r\n";
+  //  unsigned int rand_val = seed;
   auto tmp = f->begin();
   BasicBlock *old_entry = &*tmp;
   orig_bb.erase(orig_bb.begin());
@@ -197,7 +206,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   BasicBlock *firstbb = old_entry->getTerminator()->getSuccessor(0);
   if ((first_br != nullptr && first_br->isConditional()) ||
       old_entry->getTerminator()->getNumSuccessors() >
-      2) { // Split the first basic block
+          2) { // Split the first basic block
     auto iter = old_entry->end();
     --iter;
     if (old_entry->size() > 1) {
@@ -218,10 +227,9 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     tmp1->data = i;
   }
 
-  //errs() << "Count = " << all_node.size() << "\r\n";
+  // errs() << "Count = " << all_node.size() << "\r\n";
 
-  for (auto i = all_node.begin();
-       i != all_node.end(); ++i) {
+  for (auto i = all_node.begin(); i != all_node.end(); ++i) {
     Node *tmp = *i;
     BasicBlock *bb = tmp->data;
     if (bb->getTerminator()->getNumSuccessors() == 2) {
@@ -246,9 +254,9 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   std::vector<VMInst *> all_inst;
   std::map<Node *, unsigned int> inst_map;
   fake->bb1 = start;
-  //errs() << "begin gen ins\r\n";
+  // errs() << "begin gen ins\r\n";
   gen_inst(&all_inst, &inst_map, fake);
-  //errs() << "end gen ins\r\n";
+  // errs() << "end gen ins\r\n";
   dump_inst(&all_inst);
   std::vector<Constant *> opcodes;
   [[maybe_unused]] auto type_int32ty = Type::getInt32Ty(f->getContext());
@@ -258,22 +266,20 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
     opcodes.push_back(ConstantInt::get(type_int64ty, inst->op1));
     opcodes.push_back(ConstantInt::get(type_int64ty, inst->op2));
   }
-  //errs() << "inst ok\r\n";
+  // errs() << "inst ok\r\n";
 
   ArrayType *at = ArrayType::get(type_int64ty, opcodes.size());
   Constant *opcode_array =
       ConstantArray::get(at, ArrayRef<Constant *>(opcodes));
-  auto oparr_var = new GlobalVariable(
-      *(f->getParent()), at, false, GlobalValue::LinkageTypes::PrivateLinkage,
-      opcode_array, "opcodes");
+  auto oparr_var = new GlobalVariable(*(f->getParent()), at, false,
+                                      GlobalValue::LinkageTypes::PrivateLinkage,
+                                      opcode_array, "opcodes");
   // 去除第一个基本块末尾的跳转
   old_entry->getTerminator()->eraseFromParent();
-  auto vm_pc =
-      new AllocaInst(type_int64ty, 0, Twine("VMpc"), old_entry);
+  auto vm_pc = new AllocaInst(type_int64ty, 0, Twine("VMpc"), old_entry);
   ConstantInt *init_pc = ConstantInt::get(type_int64ty, 0);
   new StoreInst(init_pc, vm_pc, old_entry);
-  auto vm_flag =
-      new AllocaInst(type_int64ty, 0, Twine("VMJmpFlag"), old_entry);
+  auto vm_flag = new AllocaInst(type_int64ty, 0, Twine("VMJmpFlag"), old_entry);
   BasicBlock *vm_entry =
       BasicBlock::Create(f->getContext(), "VMEntry", f, firstbb);
 
@@ -347,7 +353,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
 #endif
   // the seconde choice
   SwitchInst *switch2 = IRB.CreateSwitch(op1, defaultCase, 0);
-  //errs() << "the seconde choice start\r\n";
+  // errs() << "the seconde choice start\r\n";
   for (std::vector<BasicBlock *>::iterator b = orig_bb.begin();
        b != orig_bb.end(); b++) {
     BasicBlock *block = *b;
@@ -361,7 +367,8 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
   for (auto block : orig_bb) { // Handle successors
     if (block->getTerminator()->getNumSuccessors() == 1) {
       //  //errs() << "\033[1;32mThis block has 1 successor\033[0m\n";
-      [[maybe_unused]] BasicBlock *succ = block->getTerminator()->getSuccessor(0);
+      [[maybe_unused]] BasicBlock *succ =
+          block->getTerminator()->getSuccessor(0);
       block->getTerminator()->eraseFromParent();
       BranchInst::Create(defaultCase, block);
     } else if (block->getTerminator()->getNumSuccessors() == 2) {
@@ -377,7 +384,7 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
       continue;
     }
   }
-  //errs() << "the seconde choice end\r\n";
+  // errs() << "the seconde choice end\r\n";
   IRB.SetInsertPoint(jmp_boring);
   IRB.CreateStore(op1, vm_pc);
   IRB.CreateBr(vm_entry);
@@ -436,10 +443,30 @@ bool VMFlat::DoFlatten(Function *f, int seed) {
 
 bool VMFlat::runVmFlaOnFunction(Function &function) {
 
-  RUN_BLOCK = cryptoutils->get_uint32_t();
-  JMP_BORING = RUN_BLOCK+1;
-  JMP_SELECT = RUN_BLOCK+2;
-  if(DoFlatten(&function, static_cast<int>(cryptoutils->get_uint32_t())))
+  if (VmFlatObfTimes <= 0) {
+    errs()
+        << "VmFlattenObfuscationPass application number -vm_times=x must be x >"
+           " 0";
+    return false;
+  }
+
+  if (!((VmObfuProbRate > 0) && (VmObfuProbRate <= 100))) {
+    errs() << "VmFlattenObfuscationPass application basic blocks percentage "
+              "-vm_prob=x must be 0 < x <= 100";
+    return false;
+  }
+
+  bool changed = false;
+  for (auto i = 0; i < VmFlatObfTimes; i++) {
+    RUN_BLOCK = cryptoutils->get_uint32_t();
+    JMP_BORING = RUN_BLOCK + 1;
+    JMP_SELECT = RUN_BLOCK + 2;
+    if (static_cast<int32_t>(cryptoutils->get_range(100)) <= VmObfuProbRate) {
+      changed |=
+          DoFlatten(&function, static_cast<int>(cryptoutils->get_uint32_t()));
+    }
+  }
+  if (changed)
     turnOffOptimization(&function);
   // DoSplit(&function,4);
   return true;
