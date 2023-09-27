@@ -4,7 +4,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -17,19 +16,15 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <cstring>
 #include <iomanip>
 #include <map>
 #include <set>
 #include <sstream>
-#include <stdint.h>
-#include <vcruntime_string.h>
+#include <cstdint>
 #include <vector>
 
 using namespace llvm;

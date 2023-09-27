@@ -20,7 +20,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 using namespace llvm;
