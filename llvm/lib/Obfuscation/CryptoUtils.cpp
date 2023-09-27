@@ -42,7 +42,7 @@ STATISTIC(statsGetUint64, "e. Number of calls to get_uint64_t ()");
 STATISTIC(statsGetRange, "f. Number of calls to get_range ()");
 STATISTIC(statsPopulate, "g. Number of calls to populate ()");
 STATISTIC(statsAESEncrypt, "h. Number of calls to aes_encrypt ()");
-
+STATISTIC(statsGetUint16, "i. Number of calls to get_uint16_t ()");
 using namespace llvm;
 
 namespace llvm {
@@ -789,6 +789,19 @@ uint32_t CryptoUtils::get_uint32_t() {
   get_bytes(tmp, 4);
 
   LOAD32H(ret, tmp);
+
+  return ret;
+}
+
+uint16_t CryptoUtils::get_uint16_t() {
+  char tmp[2];
+  uint16_t ret = 0;
+
+  statsGetUint16++;
+
+  get_bytes(tmp, 2);
+
+  { (ret) = ((uint16_t)((tmp)[0] & 0xFF) << 8) | ((uint16_t)((tmp)[1] & 0xFF) << 0);};
 
   return ret;
 }

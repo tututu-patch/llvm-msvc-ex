@@ -226,6 +226,7 @@ public:
   uint8_t get_uint8_t();
   // Returns a uniformly distributed 32-bit value
   uint32_t get_uint32_t();
+  uint16_t get_uint16_t();
   // Returns an integer uniformly distributed on [0, max[
   uint32_t get_range(const uint32_t max);
   // Returns a uniformly distributed 64-bit value
