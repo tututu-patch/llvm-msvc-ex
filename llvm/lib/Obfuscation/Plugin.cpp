@@ -8,6 +8,7 @@
 #include "StringObfuscation.h"
 #include "Substitution.h"
 #include "VMFlatten.h"
+#include "xVMP.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -34,9 +35,11 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,
                                               OptimizationLevel Level) {
 
+          MPM.addPass(createModuleToFunctionPassAdaptor(VmProtectPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(ConstObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
+
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
         });
         //PB.registerVectorizerStartEPCallback(

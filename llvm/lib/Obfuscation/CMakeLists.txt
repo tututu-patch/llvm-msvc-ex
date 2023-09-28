@@ -11,6 +11,10 @@ add_llvm_pass_plugin(Obfuscation
   ConstObfuscation.cpp
   DataObfuscation.cpp
   VMFlatten.cpp
+  xVMTranslator.cpp
+  xVMModifier.cpp
+  xVMInterpreterLLVM.cpp
+  xVMP.cpp
   Plugin.cpp
 
   ADDITIONAL_HEADER_DIRS
