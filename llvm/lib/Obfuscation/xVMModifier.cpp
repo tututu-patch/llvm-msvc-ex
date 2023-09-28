@@ -2,6 +2,8 @@
 
 #include "llvm/IR/IRBuilder.h"
 
+#define VMMODIFIER_DEBUG
+
 using namespace  llvm;
 void VMModifier::run() {
 

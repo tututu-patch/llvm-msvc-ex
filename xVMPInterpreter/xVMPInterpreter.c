@@ -7,7 +7,7 @@
 
 #define IS_INLINE_FUNC
 
-#define TEST_GOVM_C
+//#define TEST_GOVM_C
 
 uint8_t gv_code_seg[SEG_SIZE] = {
     #ifdef TEST_GOVM_C
