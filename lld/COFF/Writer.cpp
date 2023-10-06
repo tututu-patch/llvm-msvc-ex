@@ -12,7 +12,6 @@
 #include "Config.h"
 #include "DLL.h"
 #include "InputFiles.h"
-#include "LLDMapFile.h"
 #include "MapFile.h"
 #include "PDB.h"
 #include "SymbolTable.h"
@@ -304,7 +303,6 @@ private:
   OutputSection *idataSec;
   OutputSection *edataSec;
   OutputSection *didatSec;
-  OutputSection *INITSec;
   OutputSection *rsrcSec;
   OutputSection *relocSec;
   OutputSection *ctorsSec;
@@ -338,6 +336,10 @@ void OutputSection::insertChunkAtStart(Chunk *c) {
 
 void OutputSection::setPermissions(uint32_t c) {
   header.Characteristics &= ~permMask;
+  header.Characteristics |= c;
+}
+
+void OutputSection::appendPermissions(uint32_t c) {
   header.Characteristics |= c;
 }
 
@@ -719,7 +721,6 @@ void Writer::run() {
   }
   writeBuildId();
 
-  writeLLDMapFile(ctx);
   writeMapFile(ctx);
 
   if (errorCount())
@@ -825,32 +826,45 @@ bool Writer::fixGnuImportChunks() {
 // terminator in .idata$2.
 void Writer::addSyntheticIdata() {
   uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+  uint32_t INIT2 = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+                   IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_DISCARDABLE |
+                   IMAGE_SCN_MEM_NOT_PAGED;
+  uint32_t selectOutChars = ctx.config.driver ? INIT2 : rdata;
+
   idata.create(ctx);
 
   // Add the .idata content in the right section groups, to allow
   // chunks from other linked in object files to be grouped together.
   // See Microsoft PE/COFF spec 5.4 for details.
-  auto add = [&](StringRef n, std::vector<Chunk *> &v) {
-    PartialSection *pSec = createPartialSection(n, rdata);
+  auto add = [&](StringRef n, std::vector<Chunk *> &v, uint32_t outChars) {
+    PartialSection *pSec = createPartialSection(n, outChars);
     pSec->chunks.insert(pSec->chunks.end(), v.begin(), v.end());
   };
 
   // The loader assumes a specific order of data.
   // Add each type in the correct order.
-  add(".idata$2", idata.dirs);
-  add(".idata$4", idata.lookups);
-  add(".idata$5", idata.addresses);
+  add(ctx.config.driver ? "INIT2$2" : ".idata$2", idata.dirs, selectOutChars);
+  add(ctx.config.driver ? "INIT2$4" : ".idata$4", idata.lookups,
+      selectOutChars);
+  add(".idata$5", idata.addresses, rdata);
   if (!idata.hints.empty())
-    add(".idata$6", idata.hints);
-  add(".idata$7", idata.dllNames);
+    add(ctx.config.driver ? "INIT2$6" : ".idata$6", idata.hints,
+        selectOutChars);
+  add(ctx.config.driver ? "INIT2$7" : ".idata$7", idata.dllNames,
+      selectOutChars);
 }
 
 // Locate the first Chunk and size of the import directory list and the
 // IAT.
 void Writer::locateImportTables() {
   uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+  uint32_t INIT2 = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+                   IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_DISCARDABLE |
+                   IMAGE_SCN_MEM_NOT_PAGED;
+  uint32_t selectOutChars = ctx.config.driver ? INIT2 : rdata;
 
-  if (PartialSection *importDirs = findPartialSection(".idata$2", rdata)) {
+  if (PartialSection *importDirs = findPartialSection(
+          ctx.config.driver ? "INIT2$2" : ".idata$2", selectOutChars)) {
     if (!importDirs->chunks.empty())
       importTableStart = importDirs->chunks.front();
     for (Chunk *c : importDirs->chunks)
@@ -920,7 +934,8 @@ void Writer::createSections() {
     // for the specific sections.
     if (ctx.config.driver && (name == ".text" || name == ".data" ||
                               name == ".rdata" || name == ".pdata") ||
-        ((outChars & (code | r | x)) == (code | r | x)) && name != "PAGE")
+        ((outChars & (code | r | x)) == (code | r | x)) && name != "PAGE" &&
+            name != "INIT")
       outChars |= nonpaged;
     OutputSection *&sec = sections[{name, outChars}];
     if (!sec) {
@@ -940,8 +955,6 @@ void Writer::createSections() {
   idataSec = createSection(".idata", data | r);
   edataSec = createSection(".edata", data | r);
   didatSec = createSection(".didat", data | r);
-  if (ctx.config.driver)
-    INITSec = createSection("INIT", code | discardable | x | r);
   rsrcSec = createSection(".rsrc", data | r);
   relocSec = createSection(".reloc", data | discardable | r);
   ctorsSec = createSection(".ctors", data | r | w);
@@ -1017,6 +1030,8 @@ void Writer::createSections() {
 
   // Finally, move some output sections to the end.
   auto sectionOrder = [&](const OutputSection *s) {
+    if (ctx.config.driver && s->name == "INIT2")
+      return 1;
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file
     // because the loader cannot handle holes. Stripping can remove other
     // discardable ones than .reloc, which is first of them (created early).
@@ -1025,19 +1040,19 @@ void Writer::createSections() {
       // discardable sections. Stripping only removes the sections named
       // .debug_* - thus try to avoid leaving holes after stripping.
       if (s->name.starts_with(".debug_"))
-        return 3;
-      return 2;
+        return 4;
+      return 3;
     }
     // .rsrc should come at the end of the non-discardable sections because its
     // size may change by the Win32 UpdateResources() function, causing
     // subsequent sections to move (see https://crbug.com/827082).
     if (s == rsrcSec)
-      return 1;
+      return 2;
     return 0;
   };
   llvm::stable_sort(ctx.outputSections,
                     [&](const OutputSection *s, const OutputSection *t) {
-                      return sectionOrder(s) < sectionOrder(t);
+                        return sectionOrder(s) < sectionOrder(t);
                     });
 }
 
@@ -2000,8 +2015,12 @@ void Writer::setSectionPermissions() {
     StringRef name = p.first;
     uint32_t perm = p.second;
     for (OutputSection *sec : ctx.outputSections)
-      if (sec->name == name)
-        sec->setPermissions(perm);
+      if (sec->name == name) {
+        if (ctx.config.driver && name == "INIT")
+          sec->appendPermissions(perm);
+        else
+          sec->setPermissions(perm);
+      }
   }
 }
 

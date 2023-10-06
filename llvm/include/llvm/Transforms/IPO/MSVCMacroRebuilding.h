@@ -15,11 +15,6 @@ class Pass;
 
 class MSVCMacroRebuildingPass : public PassInfoMixin<MSVCMacroRebuildingPass> {
 
-private:
-  // Replace '__FUNCTION__'
-  bool replace__FUNCTION__(std::string &RegexStr, GlobalVariable &GV,
-                           ConstantDataArray *CDA, StringRef FunctionName);
-
 public:
   MSVCMacroRebuildingPass() {}
 

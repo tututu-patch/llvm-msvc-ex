@@ -2056,6 +2056,22 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Hot;
   case bitc::ATTR_KIND_PRESPLIT_COROUTINE:
     return Attribute::PresplitCoroutine;
+  case bitc::ATTR_KIND_VOLATILE_FUNCTION:
+    return Attribute::IsVolatileFunction;
+  case bitc::ATTR_KIND_DISABLE_BLOCK_PLACEMENT_PASS:
+    return Attribute::DisableBlockPlacementPass;
+  case bitc::ATTR_KIND_DISABLE_CODEGEN_PREPARE_PASS:
+    return Attribute::DisableCodeGenPreparePass;
+  case bitc::ATTR_KIND_IS_FAST_ISEL_DISABLED:
+    return Attribute::IsFastISelDisabled;
+  case bitc::ATTR_KIND_HAS_SEH:
+    return Attribute::HasSEH;
+  case bitc::ATTR_KIND_HAS_CXXSEH:
+    return Attribute::HasCXXSEH;
+  case bitc::ATTR_KIND_IS_SEH_FILTER_FUNCTION:
+    return Attribute::IsSEHFilterFunction;
+  case bitc::ATTR_KIND_IS_SEH_FINALLY_FUNCTION:
+    return Attribute::IsSEHFinallyFunction;
   }
 }
 
@@ -4683,7 +4699,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::METADATA_BLOCK_ID:
         assert(DeferredMetadataInfo.empty() &&
                "Must read all module-level metadata before function-level");
-        if (Error Err = MDLoader->parseFunctionMetadata())
+        if (Error Err = MDLoader->parseFunctionMetadata(CurBB))
           return Err;
         break;
       case bitc::USELIST_BLOCK_ID:

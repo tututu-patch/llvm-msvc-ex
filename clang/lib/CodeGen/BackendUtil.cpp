@@ -576,6 +576,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
+  TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
@@ -1074,12 +1075,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         if (CodeGenOpts.UnifiedLTO)
           TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
       }
-      if (Action == Backend_EmitBC)
-        MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+      if (!CodeGenOpts.PrepareForLTO) {
+        if (Action == Backend_EmitBC)
+          MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+                                        EmitLTOSummary));
+        else
+          MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
                                       EmitLTOSummary));
-      else
-        MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
-                                    EmitLTOSummary));
+      }
     }
   }
   if (CodeGenOpts.FatLTO) {
@@ -1113,6 +1116,17 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   {
     // Welcome to llvm-msvc pass
     MPM.addPass(WelcomeToLLVMMSVCPass(true));
+
+    // For /GL(LTO)
+    if (CodeGenOpts.PrepareForLTO) {
+      bool EmitLTOSummary = shouldEmitRegularLTOSummary();
+      if (Action == Backend_EmitBC)
+        MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+                                      EmitLTOSummary));
+      else
+        MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
+                                    EmitLTOSummary));
+    }
     
     // IR auto generator pass(Post)
     MPM.addPass(IRAutoGeneratorPostPass(CodeGenOpts.AutoGenerateIR,

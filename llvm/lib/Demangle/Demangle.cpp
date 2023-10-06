@@ -39,6 +39,30 @@ std::string llvm::demangleGetFunctionName(std::string_view MangledName) {
           DemangledStr.substr(EndIndex + 1, StartIndex - EndIndex - 1);
     }
   }
+
+  // Handle ctor/dtor
+  {
+    size_t SplitPos = DemangledStr.find("::");
+    if (SplitPos != std::string::npos) {
+      std::string Part1 = DemangledStr.substr(0, SplitPos);
+      std::string Part2 = DemangledStr.substr(SplitPos + 2);
+      bool IsCtorOrDtor = false;
+      if (Part1 == Part2) {
+        // ctor
+        IsCtorOrDtor = true;
+      } else if ("~" + Part1 == Part2) {
+        // dtor
+        IsCtorOrDtor = true;
+      }
+
+      if (IsCtorOrDtor) {
+        SplitPos = DemangledStr.rfind("<");
+        if (SplitPos != std::string::npos)
+          DemangledStr = DemangledStr.substr(0, SplitPos);
+      }
+    }
+  }
+
   return DemangledStr;
 }
 
@@ -49,7 +73,8 @@ std::string llvm::demangle(std::string_view MangledName) {
     return Result;
 
   if (starts_with(MangledName, '_') &&
-      nonMicrosoftDemangle(MangledName.substr(1), Result))
+      nonMicrosoftDemangle(MangledName.substr(1), Result,
+                           /*CanHaveLeadingDot=*/false))
     return Result;
 
   if (char *Demangled = microsoftDemangle(MangledName, nullptr, nullptr)) {
@@ -71,8 +96,15 @@ static bool isRustEncoding(std::string_view S) { return starts_with(S, "_R"); }
 static bool isDLangEncoding(std::string_view S) { return starts_with(S, "_D"); }
 
 bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
-                                std::string &Result) {
+                                std::string &Result, bool CanHaveLeadingDot) {
   char *Demangled = nullptr;
+
+  // Do not consider the dot prefix as part of the demangled symbol name.
+  if (CanHaveLeadingDot && MangledName.size() > 0 && MangledName[0] == '.') {
+    MangledName.remove_prefix(1);
+    Result = ".";
+  }
+
   if (isItaniumEncoding(MangledName))
     Demangled = itaniumDemangle(MangledName);
   else if (isRustEncoding(MangledName))
@@ -83,7 +115,7 @@ bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
   if (!Demangled)
     return false;
 
-  Result = Demangled;
+  Result += Demangled;
   std::free(Demangled);
   return true;
 }

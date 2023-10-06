@@ -1707,9 +1707,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->driverWdm = args.hasArg(OPT_driver_wdm) ||
                       args.hasArg(OPT_driver_uponly_wdm) ||
                       args.hasArg(OPT_driver_wdm_uponly);
-  config->driver =
+  config->driver |=
       config->driverUponly || config->driverWdm || args.hasArg(OPT_driver);
-
+          
+  // Check if any ObjFile instance has kernel enabled
+  if (!config->driver) {
+    for (ObjFile *file : ctx.objFileInstances) {
+      if (file->doesKernelDriver()) {
+        config->driver = true;
+        break;
+      }
+    }  
+  }
+          
   // Handle /pdb
   bool shouldCreatePDB =
       (debug == DebugKind::Full || debug == DebugKind::GHash ||
@@ -1734,6 +1744,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     if (auto *arg = args.getLastArg(OPT_pdb_source_path))
       config->pdbSourcePath = arg->getValue();
+
+    if (args.hasArg(OPT_fullpdbpath))
+      config->enableFullPdbPath = true;
   }
 
   // Handle /pdbstripped
@@ -1956,10 +1969,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Add default section merging rules after user rules. User rules take
   // precedence, but we will emit a warning if there is a conflict.
-  if (config->driver)
-    parseMerge(".idata=INIT");
-  else
-    parseMerge(".idata=.rdata");
+  parseMerge(".idata=.rdata");
   parseMerge(".didat=.rdata");
   if (!config->driver)
     parseMerge(".edata=.rdata");
@@ -1968,7 +1978,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   parseMerge(".voltbl=.rdata");
   parseMerge("newworld=.rdata");
   parseMerge(".bss=.data");
-
+  if (config->driver)
+    parseMerge("INIT2=INIT");
+          
   if (config->mingw) {
     parseMerge(".ctors=.rdata");
     parseMerge(".dtors=.rdata");
@@ -2345,16 +2357,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // The embedded PDB path should be the absolute path to the PDB if no
     // /pdbaltpath flag was passed.
     if (config->pdbAltPath.empty()) {
-      // config->pdbAltPath = config->pdbPath;
-
-      // It's important to make the path absolute and remove dots.  This path
-      // will eventually be written into the PE header, and certain Microsoft
-      // tools won't work correctly if these assumptions are not held.
-      // sys::fs::make_absolute(config->pdbAltPath);
-      // sys::path::remove_dots(config->pdbAltPath);
-      // This way below can hide our pdb path.
-      config->pdbAltPath =
-          sys::path::filename(config->pdbPath, sys::path::Style::windows);
+      if (config->enableFullPdbPath) {
+        config->pdbAltPath = config->pdbPath;
+        // It's important to make the path absolute and remove dots.  This path
+        // will eventually be written into the PE header, and certain Microsoft
+        // tools won't work correctly if these assumptions are not held.
+        sys::fs::make_absolute(config->pdbAltPath);
+        sys::path::remove_dots(config->pdbAltPath);
+      } else {
+        // This way below can hide our pdb path.
+        config->pdbAltPath =
+            sys::path::filename(config->pdbPath, sys::path::Style::windows);
+      }
     } else {
       // Don't do this earlier, so that ctx.OutputFile is ready.
       parsePDBAltPath();

@@ -131,6 +131,7 @@ struct Configuration {
   bool showTiming = false;
   bool showSummary = false;
   bool printSearchPaths = false;
+  bool enableFullPdbPath = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   std::vector<std::string> natvisFiles;
@@ -169,7 +170,7 @@ struct Configuration {
   bool noSEH = false;
 
   // Used for /opt:lldlto=N
-  unsigned ltoo = 2;
+  unsigned ltoo = 0;
   // Used for /opt:lldltocgo=N
   std::optional<unsigned> ltoCgo;
 

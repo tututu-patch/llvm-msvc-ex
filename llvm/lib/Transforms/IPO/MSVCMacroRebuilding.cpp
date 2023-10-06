@@ -21,44 +21,6 @@
 
 using namespace llvm;
 
-// Replace '__FUNCTION__'
-bool MSVCMacroRebuildingPass::replace__FUNCTION__(std::string &RegexStr,
-                                                  GlobalVariable &GV,
-                                                  ConstantDataArray *CDA,
-                                                  StringRef FunctionName) {
-
-  // Get the original string value of the constant data array.
-  std::string OriginalStr = CDA->getAsCString().str();
-  if (OriginalStr.empty())
-    return false;
-  if (OriginalStr.length() < 20)
-    return false;
-
-  // Check the marker name.
-  if (OriginalStr.find(
-          MSVCMacroRebuildingPass::get__FUNCTION__MarkerName().str()) ==
-      std::string::npos)
-    return false;
-
-  // Replace the macro marker and file name in the original string with
-  // the name of the function containing the instruction.
-  std::string ReplacedStr = std::regex_replace(
-      OriginalStr, std::regex(RegexStr), demangleGetFunctionName(FunctionName));
-
-  // If the replaced string is the same as the original string, skip the
-  // variable.
-  if (ReplacedStr == OriginalStr)
-    return false;
-
-  // Create a new constant data array containing the demangled function
-  // name and set it as the initializer of the global variable.
-  Constant *NewStr =
-      ConstantDataArray::getString(GV.getParent()->getContext(), ReplacedStr);
-  GV.setInitializer(NewStr);
-
-  return true;
-}
-
 // Implementation of the run() function for the MSVCMacroRebuildingPass
 // class
 PreservedAnalyses MSVCMacroRebuildingPass::run(Module &M,
@@ -79,28 +41,71 @@ PreservedAnalyses MSVCMacroRebuildingPass::run(Module &M,
       continue;
 
     // Check if the initializer is a constant data array of strings.
-    if (ConstantDataArray *CDA =
-            dyn_cast<ConstantDataArray>(GV.getInitializer())) {
-      if (!CDA->isString())
-        continue;
+    ConstantDataArray *CDA = dyn_cast<ConstantDataArray>(GV.getInitializer());
+    if (!CDA)
+      continue;
+    if (!CDA->isString())
+      continue;
 
-      // Iterate over all users of the global variable and check if it is an
-      // instruction in a function.
-      for (auto UserIt = GV.users().begin(); UserIt != GV.users().end();
-           ++UserIt) {
-        if (Instruction *I = dyn_cast<Instruction>(*UserIt)) {
-          if (!I->getParent())
-            continue;
+    // Get the original string value of the constant data array.
+    std::string OriginalStr = CDA->getAsCString().str();
+    if (OriginalStr.empty())
+      continue;
+    if (OriginalStr.length() < 20)
+      continue;
 
-          Function *F = I->getParent()->getParent();
-          if (!F)
-            continue;
+    // Check the marker name.
+    if (CDA->getAsCString().str().find(
+            MSVCMacroRebuildingPass::get__FUNCTION__MarkerName().str()) ==
+        std::string::npos)
+      continue;
 
-          // Replace '__FUNCTION__'
-          Changed |=
-              replace__FUNCTION__(RegexStr__FUNCTION__, GV, CDA, F->getName());
+    // Iterate over all users of the global variable and check if it is an
+    // instruction in a function.
+    SmallVector<std::pair<Instruction *, unsigned int>, 32> Users;
+    for (auto UserIt = GV.users().begin(); UserIt != GV.users().end();
+         ++UserIt) {
+      if (Instruction *I = dyn_cast<Instruction>(*UserIt)) {
+        if (!I->getParent())
+          continue;
+        Function *F = I->getParent()->getParent();
+        if (!F)
+          continue;
+        for (unsigned int OperandIndex = 0; OperandIndex < I->getNumOperands();
+             OperandIndex++) {
+          if (I->getOperand(OperandIndex) == &GV) {
+            Users.push_back({I, OperandIndex});
+            break;
+          }
         }
       }
+    }
+
+    for (auto &Pair : Users) {
+      Instruction *I = Pair.first;
+      unsigned int OperandIndex = Pair.second;
+      Function &F = *I->getParent()->getParent();
+
+      // Replace '__FUNCTION__'
+      std::string NewStr =
+          std::regex_replace(OriginalStr, std::regex(RegexStr__FUNCTION__),
+                             demangleGetFunctionName(F.getName()));
+
+      if (NewStr.empty())
+        continue;
+
+      // Create a new GV to replace the old one.
+      std::string NewGVName =
+          MSVCMacroRebuildingPass::get__FUNCTION__MarkerName().str() + NewStr;
+      GlobalVariable *NewGV = M.getNamedGlobal(NewGVName);
+      if (!NewGV) {
+        Constant *NewCDA = ConstantDataArray::getString(M.getContext(), NewStr);
+        NewGV =
+            new GlobalVariable(M, NewCDA->getType(), true,
+                               GlobalValue::PrivateLinkage, NewCDA, NewGVName);
+      }
+      I->setOperand(OperandIndex, NewGV);
+      Changed = true;
     }
   }
 
