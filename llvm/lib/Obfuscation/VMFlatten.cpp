@@ -2,6 +2,7 @@
 
 #include "ConstObfuscation.h"
 #include "CryptoUtils.h"
+#include "IndirectGlobalVars.h"
 #include "Utils.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -83,7 +84,7 @@ struct VMFlat {
 
   Node *findBBNode(const BasicBlock *bb, const std::vector<Node *> *all_node);
 
-  void dump_inst(const std::vector<VMInst *> *all_inst) const;
+  [[maybe_unused]] void dump_inst(const std::vector<VMInst *> *all_inst) const;
   bool DoFlatten(Function *f);
   void insertMemoryAttackTaint(Function &F);
   void insertSymbolicMemorySnippet(Function &F);
@@ -1239,6 +1240,8 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
       ConstEncryption str;
       str.runOnFunction(function,false);
       //IndirectGlobalVars
+      IndirectGlobalVariable gv;
+      gv.runOnFunction(function);
     }
    
     turnOffOptimization(&function);

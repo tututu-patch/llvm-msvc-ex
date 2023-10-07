@@ -6,6 +6,7 @@ add_llvm_pass_plugin(Obfuscation
   SplitBasicBlock.cpp
   Flattening.cpp
   IndirectCall.cpp
+  IndirectGlobalVars.cpp
   StringObfuscation.cpp
   MBAObfuscation.cpp
   ConstObfuscation.cpp
