@@ -489,7 +489,7 @@ bool VMFlat::DoFlatten(Function *f) {
   Value *table1 = irb.CreateAlloca(array_table_type);
   Value *table2 = irb.CreateAlloca(array_table_type);
 
-  auto ptr_array_type = ArrayType::get(irb.getInt64Ty(), 32);
+  const auto ptr_array_type = ArrayType::get(irb.getInt64Ty(), 32);
   Value *ptr1 = irb.CreateBitCast(table1, PointerType::get(ptr_array_type,
                                     dyn_cast<PointerType>(table1->getType())->getAddressSpace()));
   Value *ptr2 = irb.CreateBitCast(table2, PointerType::get(ptr_array_type,
