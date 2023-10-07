@@ -489,9 +489,10 @@ bool VMFlat::DoFlatten(Function *f) {
   Value *table1 = irb.CreateAlloca(array_table_type);
   Value *table2 = irb.CreateAlloca(array_table_type);
 
-  Value *ptr1 = irb.CreateBitCast(table1, PointerType::get(ArrayType::get(irb.getInt64Ty(), 32),
+  auto ptr_array_type = ArrayType::get(irb.getInt64Ty(), 32);
+  Value *ptr1 = irb.CreateBitCast(table1, PointerType::get(ptr_array_type,
                                     dyn_cast<PointerType>(table1->getType())->getAddressSpace()));
-  Value *ptr2 = irb.CreateBitCast(table2, PointerType::get(ArrayType::get(irb.getInt64Ty(), 32),
+  Value *ptr2 = irb.CreateBitCast(table2, PointerType::get(ptr_array_type,
                                     dyn_cast<PointerType>(table2->getType())->getAddressSpace()));
 
   uint8_t buf[256];
@@ -500,8 +501,8 @@ bool VMFlat::DoFlatten(Function *f) {
   }
   const auto *p_buf = reinterpret_cast<uint64_t *>(buf);
   for (int i = 0; i < (256 / 8); i++) {
-    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr1->getType(),ptr1, 0, i))->setVolatile(true);
-    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr2->getType(),ptr2, 0, i))->setVolatile(true);
+    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr_array_type,ptr1, 0, i))->setVolatile(true);
+    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr_array_type,ptr2, 0, i))->setVolatile(true);
   }
 
   for (BasicBlock &BB: F) {
@@ -540,10 +541,10 @@ bool VMFlat::DoFlatten(Function *f) {
             }
             Value *idx[2] = {builder.getInt32(0), index};
             const auto x1_gep = builder.CreateGEP(array_table_type,table1, idx);
-            Value *x1 = builder.CreateLoad(x1_gep->getType(), x1_gep);
+            Value *x1 = builder.CreateLoad(array_table_type->getElementType(), x1_gep);
             cast<LoadInst>(x1)->setVolatile(true);
             const auto x2_gep = builder.CreateGEP(array_table_type,table2, idx);
-            Value *x2 = builder.CreateLoad(x2_gep->getType(), x2_gep);
+            Value *x2 = builder.CreateLoad(array_table_type->getElementType(), x2_gep);
             cast<LoadInst>(x2)->setVolatile(true);
             Value *z = builder.CreateSub(x1, x2);
             z = builder.CreateAdd(I.getOperand(i), builder.CreateIntCast(z, I.getOperand(i)->getType(),
@@ -581,6 +582,7 @@ bool VMFlat::DoFlatten(Function *f) {
 
   Value *i64_ptr = builder.CreateBitCast(array,i64_ptr_type);
 
+
   uint64_t i64_arr[256 / 8];
   uint8_t buf[256];
   for (int i = 0; i < 256; i++) {
@@ -589,7 +591,7 @@ bool VMFlat::DoFlatten(Function *f) {
   hex2i64(buf, 256, i64_arr);
   for (int i = 0; i < (256 / 8); i++) {
     builder.CreateStore(builder.getInt64(i64_arr[i]),
-                        builder.CreateConstGEP2_64(builder.getInt64Ty(),i64_ptr, 0, i))->setVolatile(true);
+                        builder.CreateConstGEP2_64(ArrayType::get(builder.getInt64Ty(), 32),i64_ptr, 0, i),true);
   }
 
 
@@ -643,8 +645,8 @@ bool VMFlat::DoFlatten(Function *f) {
         //bytes[i] = array[bytes[i]]
         for (int j = 0; j < len_of_bytes; j++) {
           Value *idx[2] = {magic_0, bytes[j]};
-          const auto load_value_gep =builder.CreateGEP(Type::getInt8Ty(F.getContext()),array, idx);
-          LoadInst *load_value = builder.CreateLoad(Type::getInt8Ty(F.getContext()),load_value_gep);
+          const auto load_value_gep =builder.CreateGEP(array_type,array, idx);
+          LoadInst *load_value = builder.CreateLoad(array_type->getElementType(),load_value_gep);
           load_value->setVolatile(true);
           bytes[j] = builder.CreateZExt(load_value, num_ty);
         }
@@ -1228,7 +1230,7 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   {
     if(RunVmFlatObfuscationPassSym)
     {
-      //insertMemoryAttackTaint(function);
+      insertMemoryAttackTaint(function);
       insertSymbolicMemorySnippet(function);
       //fixStack(function,false);
     }
