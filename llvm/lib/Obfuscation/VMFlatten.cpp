@@ -296,16 +296,16 @@ bool VMFlat::DoFlatten(Function *f) {
   // errs() << "end gen ins\r\n";
   // dump_inst(&all_inst);
   std::vector<Constant *> opcodes;
-  [[maybe_unused]] auto type_int32ty = Type::getInt32Ty(f->getContext());
-  auto type_int64ty = Type::getInt64Ty(f->getContext());
+  [[maybe_unused]] auto type_int32_ty = Type::getInt32Ty(f->getContext());
+  auto type_int64_ty = Type::getInt64Ty(f->getContext());
   for (auto inst : all_inst) {
-    opcodes.push_back(ConstantInt::get(type_int64ty, inst->type));
-    opcodes.push_back(ConstantInt::get(type_int64ty, inst->op1));
-    opcodes.push_back(ConstantInt::get(type_int64ty, inst->op2));
+    opcodes.push_back(ConstantInt::get(type_int64_ty, inst->type));
+    opcodes.push_back(ConstantInt::get(type_int64_ty, inst->op1));
+    opcodes.push_back(ConstantInt::get(type_int64_ty, inst->op2));
   }
   // errs() << "inst ok\r\n";
 
-  ArrayType *at = ArrayType::get(type_int64ty, opcodes.size());
+  ArrayType *at = ArrayType::get(type_int64_ty, opcodes.size());
   Constant *opcode_array =
       ConstantArray::get(at, ArrayRef<Constant *>(opcodes));
   auto oparr_var = new GlobalVariable(*(f->getParent()), at, false,
@@ -314,24 +314,24 @@ bool VMFlat::DoFlatten(Function *f) {
   // 去除第一个基本块末尾的跳转
   old_entry->getTerminator()->eraseFromParent();
   auto vm_pc =
-      new AllocaInst(type_int64ty, 0, Twine(new_name_pre + "VMpc"), old_entry);
-  ConstantInt *init_pc = ConstantInt::get(type_int64ty, 0);
+      new AllocaInst(type_int64_ty, 0, Twine(new_name_pre + "VMpc"), old_entry);
+  ConstantInt *init_pc = ConstantInt::get(type_int64_ty, 0);
   new StoreInst(init_pc, vm_pc, old_entry);
-  auto vm_flag = new AllocaInst(type_int64ty, 0,
+  auto vm_flag = new AllocaInst(type_int64_ty, 0,
                                 Twine(new_name_pre + "VMJmpFlag"), old_entry);
   BasicBlock *vm_entry = BasicBlock::Create(
       f->getContext(), Twine(new_name_pre + "VMEntry"), f, firstbb);
 
   BranchInst::Create(vm_entry, old_entry);
   IRBuilder<> IRB(vm_entry);
-  Value *zero = ConstantInt::get(type_int64ty, 0);
+  Value *zero = ConstantInt::get(type_int64_ty, 0);
 
   Value *op1_offset =
       IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc),
-                    ConstantInt::get(type_int64ty, 1));
+                    ConstantInt::get(type_int64_ty, 1));
   Value *op2_offset =
       IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc),
-                    ConstantInt::get(type_int64ty, 2));
+                    ConstantInt::get(type_int64_ty, 2));
 
   auto optype_gep =
       IRB.CreateGEP(oparr_var->getValueType(), oparr_var,
@@ -346,7 +346,7 @@ bool VMFlat::DoFlatten(Function *f) {
 
   IRB.CreateStore(
       IRB.CreateAdd(IRB.CreateLoad(vm_pc->getAllocatedType(), vm_pc),
-                    ConstantInt::get(type_int64ty, 3)),
+                    ConstantInt::get(type_int64_ty, 3)),
       vm_pc);
   BasicBlock *run_block = BasicBlock::Create(
       f->getContext(), new_name_pre + "RunBlock", f, firstbb);
@@ -358,9 +358,9 @@ bool VMFlat::DoFlatten(Function *f) {
       BasicBlock::Create(f->getContext(), new_name_pre + "Default", f, firstbb);
   BranchInst::Create(vm_entry, defaultCase);
   SwitchInst *switch1 = IRB.CreateSwitch(optype, defaultCase, 0);
-  switch1->addCase(ConstantInt::get(type_int64ty, RUN_BLOCK), run_block);
-  switch1->addCase(ConstantInt::get(type_int64ty, JMP_BORING), jmp_boring);
-  switch1->addCase(ConstantInt::get(type_int64ty, JMP_SELECT), jmp_select);
+  switch1->addCase(ConstantInt::get(type_int64_ty, RUN_BLOCK), run_block);
+  switch1->addCase(ConstantInt::get(type_int64_ty, JMP_BORING), jmp_boring);
+  switch1->addCase(ConstantInt::get(type_int64_ty, JMP_SELECT), jmp_select);
 
   // create run_block's basicblock
   // the first choice
@@ -401,7 +401,7 @@ bool VMFlat::DoFlatten(Function *f) {
     // ConstantInt *numCase =
     // cast<ConstantInt>(ConstantInt::get(switch2->getCondition()->getType(),
     // t->value));
-    switch2->addCase(ConstantInt::get(type_int64ty, t->value), block);
+    switch2->addCase(ConstantInt::get(type_int64_ty, t->value), block);
   }
   for (auto block : orig_bb) { // Handle successors
     if (block->getTerminator()->getNumSuccessors() == 1) {
@@ -414,8 +414,8 @@ bool VMFlat::DoFlatten(Function *f) {
       // ////errs() << "\033[1;32mThis block has 2 successors\033[0m\n";
       auto old_br = cast<BranchInst>(block->getTerminator());
       SelectInst *select = SelectInst::Create(
-          old_br->getCondition(), ConstantInt::get(type_int64ty, 1),
-          ConstantInt::get(type_int64ty, 0), "", block->getTerminator());
+          old_br->getCondition(), ConstantInt::get(type_int64_ty, 1),
+          ConstantInt::get(type_int64_ty, 0), "", block->getTerminator());
       new StoreInst(select, vm_flag, block->getTerminator());
       block->getTerminator()->eraseFromParent();
       BranchInst::Create(defaultCase, block);
@@ -435,7 +435,7 @@ bool VMFlat::DoFlatten(Function *f) {
       f->getContext(), new_name_pre + "JmpSelectFalse", f, firstbb);
   IRB.CreateCondBr(
       IRB.CreateICmpEQ(IRB.CreateLoad(vm_flag->getAllocatedType(), vm_flag),
-                       ConstantInt::get(type_int64ty, 1)),
+                       ConstantInt::get(type_int64_ty, 1)),
       select_true, select_false);
   IRB.SetInsertPoint(select_true);
   IRB.CreateStore(op1, vm_pc);
