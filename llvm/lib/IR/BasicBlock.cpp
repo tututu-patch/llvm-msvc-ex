@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -93,6 +94,18 @@ bool BasicBlock::hasPHINode() {
     if (isa<PHINode>(&I))
       return true;
   return false;
+}
+
+// Transform BlockA->BlockB to BlockA->BlockStub->BlockB
+BasicBlock *BasicBlock::createStubBlock(BasicBlock *BlockB) {
+  BasicBlock *BlockA = this;
+  BasicBlock *NewBlock = BasicBlock::Create(BlockA->getContext(), "StubBlock",
+                                            BlockA->getParent(), BlockB);
+  IRBuilder<> IRB(NewBlock);
+  IRB.CreateBr(BlockB);
+  BlockA->getTerminator()->replaceSuccessorWith(BlockB, NewBlock);
+  BlockB->replacePhiUsesWith(BlockA, NewBlock);
+  return NewBlock;
 }
 
 BasicBlock::~BasicBlock() {
