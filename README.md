@@ -18,9 +18,11 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 ```
 
 ### 计划
-- [x] 添加反符号执行和反内存追踪
+- [x] 在vm-fla-sym添加反符号执行和反内存追踪
+- [x] vm-fla-enc 对vm-fla的部分数据加密
 - [ ] MBA-subs的bug
-- [ ] 移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
+- [ ] 移植xVMP
+- [ ] 在vm-fla-enc中使用间接全局变量访问
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -79,8 +81,13 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 
 ### 混淆例子
 Add To VS Project Compiler Cmdline
+#### 最大保护（文件将超过10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-enc
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-enc -mllvm -vm-fla-sym
+```
+#### 单纯使用特色部分（轻量模式）
+```
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-enc -mllvm -vm-fla-sym
 ```
 #### 需要修改载研究的部分
 ```
