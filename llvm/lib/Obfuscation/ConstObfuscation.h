@@ -8,13 +8,14 @@
 namespace llvm {
 
 struct ConstEncryption {
-  ConstEncryption():CONTEXT(nullptr){}
+  ConstEncryption():CONTEXT(nullptr),vm_flag(false){}
   LLVMContext *CONTEXT;
+  bool vm_flag;
   bool shouldEncryptConstant(Instruction *I);
   void bitwiseSubstitute(Instruction *I, int i);
   void linearSubstitute(Instruction *I, int i);
   void substitute(Instruction *I);
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F,bool vm_fla);
 };
 
 class ConstObfuscationPass : public PassInfoMixin<ConstObfuscationPass> {

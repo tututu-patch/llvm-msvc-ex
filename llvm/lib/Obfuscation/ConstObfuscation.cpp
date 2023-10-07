@@ -18,10 +18,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cstdint>
 #include <iomanip>
 #include <set>
 #include <sstream>
-#include <cstdint>
 #include <vector>
 
 using namespace llvm;
@@ -38,7 +38,7 @@ namespace llvm {
 //   unsigned int pos;
 //   Value *val;
 // };
-//struct ConstEncryption {
+// struct ConstEncryption {
 //  ConstEncryption():CONTEXT(nullptr){}
 //  LLVMContext *CONTEXT;
 //  // void handleInstruction2(Function *f, Instruction *ii, unsigned int
@@ -73,7 +73,8 @@ namespace llvm {
 //  //             int8ty);
 //  //         g->setInitializer((Constant *)val1);
 //  //         LoadInst *load = new LoadInst(int8ty, g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -82,7 +83,8 @@ namespace llvm {
 //  //         count++;
 //  //       } else if (consts->getType() == int16ty) {
 //  //         //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
-//  //         unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
+//  //         unsigned short data = (consts->getValue().getZExtValue()) &
+//  0xFFFF;
 //  //         unsigned short rr = (cryptoutils->get_uint32_t() & 0xFFFF);
 //  //         unsigned short tt = data ^ rr;
 //  //         Value *val1 = ConstantInt::get(int16ty, tt);
@@ -92,7 +94,8 @@ namespace llvm {
 //  //                                                                 int16ty);
 //  //         g->setInitializer((Constant *)val1);
 //  //         LoadInst *load = new LoadInst(int16ty, g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -110,7 +113,8 @@ namespace llvm {
 //  //                                                                 int32ty);
 //  //         g->setInitializer((Constant *)val1);
 //  //         LoadInst *load = new LoadInst(int32ty, g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -132,7 +136,8 @@ namespace llvm {
 //  //                                                                 int64ty);
 //  //         g->setInitializer((Constant *)val1);
 //  //         LoadInst *load = new LoadInst(int64ty, g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -146,7 +151,8 @@ namespace llvm {
 //  //   for (const auto &update : updates)
 //  //     ii->setOperand(update->pos, update->val);
 //  // }
-//  // void handleInstruction1(Function *f, Instruction *ii, unsigned int &count)
+//  // void handleInstruction1(Function *f, Instruction *ii, unsigned int
+//  &count)
 //  // {
 //  //   int pos = 0;
 //  //   //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
@@ -174,7 +180,8 @@ namespace llvm {
 //  //         AllocaInst *g = irb.CreateAlloca(int8ty);
 //  //         irb.CreateStore(val1, g);
 //  //         LoadInst *load = new LoadInst(g->getAllocatedType(), g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -183,7 +190,8 @@ namespace llvm {
 //  //         count++;
 //  //       } else if (consts->getType() == int16ty) {
 //  //         //printf"CONST OBFUS %d %s\r\n",__LINE__,__FUNCTION__);
-//  //         unsigned short data = (consts->getValue().getZExtValue()) & 0xFFFF;
+//  //         unsigned short data = (consts->getValue().getZExtValue()) &
+//  0xFFFF;
 //  //         unsigned short rr = (cryptoutils->get_uint32_t() & 0xFFFF);
 //  //         unsigned short tt = data ^ rr;
 //  //         Value *val1 = ConstantInt::get(int16ty, tt);
@@ -191,7 +199,8 @@ namespace llvm {
 //  //         AllocaInst *g = irb.CreateAlloca(int16ty);
 //  //         irb.CreateStore(val1, g);
 //  //         LoadInst *load = new LoadInst(g->getAllocatedType(), g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -205,7 +214,8 @@ namespace llvm {
 //  //         0xFFFFFFFF); unsigned int tt = data ^ rr; Value *val1 =
 //  //         ConstantInt::get(int32ty, tt); Value *val2 =
 //  //         ConstantInt::get(int32ty, rr); AllocaInst *g =
-//  //         irb.CreateAlloca(int32ty); irb.CreateStore(val1, g); LoadInst *load
+//  //         irb.CreateAlloca(int32ty); irb.CreateStore(val1, g); LoadInst
+//  *load
 //  //         = new LoadInst(g->getAllocatedType(), g, "", ii); Value *vv =
 //  //         BinaryOperator::Create(Instruction::Xor, (Value *)load,
 //  //                                            (Value *)val2, "", ii);
@@ -227,7 +237,8 @@ namespace llvm {
 //  //         AllocaInst *g = irb.CreateAlloca(int64ty);
 //  //         irb.CreateStore(val1, g);
 //  //         LoadInst *load = new LoadInst(g->getAllocatedType(), g, "", ii);
-//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value *)load,
+//  //         Value *vv = BinaryOperator::Create(Instruction::Xor, (Value
+//  *)load,
 //  //                                            (Value *)val2, "", ii);
 //  //         Pair *node = (Pair *)malloc(sizeof(Pair));
 //  //         node->pos = pos;
@@ -297,9 +308,16 @@ namespace llvm {
 //};
 
 bool ConstEncryption::shouldEncryptConstant(Instruction *I) {
-  if (isa<SwitchInst>(I) || isa<IntrinsicInst>(I) ||
-      isa<GetElementPtrInst>(I) || isa<PHINode>(I) || I->isAtomic())
-    return false;
+
+  if (vm_flag) {
+    if (isa<IntrinsicInst>(I) || isa<GetElementPtrInst>(I) || isa<PHINode>(I) ||
+        I->isAtomic())
+      return false;
+  } else {
+    if (isa<SwitchInst>(I) || isa<IntrinsicInst>(I) ||
+        isa<GetElementPtrInst>(I) || isa<PHINode>(I) || I->isAtomic())
+      return false;
+  }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(I))
     if (AI->isSwiftError())
       return false;
@@ -307,73 +325,75 @@ bool ConstEncryption::shouldEncryptConstant(Instruction *I) {
 }
 
 void ConstEncryption::bitwiseSubstitute(Instruction *I, int i) {
-    Module &M = *I->getModule();
-    ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
-    IntegerType *type = val->getType();
-    uint32_t width = type->getIntegerBitWidth();
-    // 不对位数小于8的整数进行替代
-    if (width < 8) {
-        return;
-    }
-    uint32_t left = cryptoutils->get_uint32_t() % (width - 1) + 1;
-    uint32_t right = width - left;
-    // 随机生成 x, y
-    APInt mask = type->getMask();
-    uint64_t randX = (cryptoutils->get_uint64_t() & mask).getZExtValue();
-    uint64_t randY = (cryptoutils->get_uint64_t() & mask).getZExtValue();
-    // 计算 c = val ^ (x << left | y >> right)
-    APInt c = val->getValue() ^ (randX << left | randY >> right);
-    ConstantInt *constX = CONST(type, randX);
-    ConstantInt *constY = CONST(type, randY);
-    ConstantInt *constC = (ConstantInt *)CONST(type, c);
-    // 创建全局变量 x, y
-    GlobalVariable *x = new GlobalVariable(
-        M, type, false, GlobalValue::PrivateLinkage, constX, "x");
-    GlobalVariable *y = new GlobalVariable(
-        M, type, false, GlobalValue::PrivateLinkage, constY, "y");
-    LoadInst *opX = new LoadInst(type, x, "", I);
-    LoadInst *opY = new LoadInst(type, y, "", I);
-    // 构造 op = (x << left | y >> right) ^ c 表达式
-    BinaryOperator *op1 =
-        BinaryOperator::CreateShl(opX, CONST(type, left), "", I);
-    BinaryOperator *op2 =
-        BinaryOperator::CreateLShr(opY, CONST(type, right), "", I);
-    BinaryOperator *op3 = BinaryOperator::CreateOr(op1, op2, "", I);
-    BinaryOperator *op4 = BinaryOperator::CreateXor(op3, constC, "", I);
-    // 用表达式 (x << left | y >> right) ^ c 替换原常量操作数
-    I->setOperand(i, op4);
+  Module &M = *I->getModule();
+  ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
+  IntegerType *type = val->getType();
+  uint32_t width = type->getIntegerBitWidth();
+  // 不对位数小于8的整数进行替代
+  if (width < 8) {
+    // 低宽度只能交给线性替换
+    // linearSubstitute(I,i);
+    return;
+  }
+  uint32_t left = cryptoutils->get_uint32_t() % (width - 1) + 1;
+  uint32_t right = width - left;
+  // 随机生成 x, y
+  APInt mask = type->getMask();
+  uint64_t randX = (cryptoutils->get_uint64_t() & mask).getZExtValue();
+  uint64_t randY = (cryptoutils->get_uint64_t() & mask).getZExtValue();
+  // 计算 c = val ^ (x << left | y >> right)
+  APInt c = val->getValue() ^ (randX << left | randY >> right);
+  ConstantInt *constX = CONST(type, randX);
+  ConstantInt *constY = CONST(type, randY);
+  ConstantInt *constC = (ConstantInt *)CONST(type, c);
+  // 创建全局变量 x, y
+  GlobalVariable *x = new GlobalVariable(
+      M, type, false, GlobalValue::PrivateLinkage, constX, "x");
+  GlobalVariable *y = new GlobalVariable(
+      M, type, false, GlobalValue::PrivateLinkage, constY, "y");
+  LoadInst *opX = new LoadInst(type, x, "", I);
+  LoadInst *opY = new LoadInst(type, y, "", I);
+  // 构造 op = (x << left | y >> right) ^ c 表达式
+  BinaryOperator *op1 =
+      BinaryOperator::CreateShl(opX, CONST(type, left), "", I);
+  BinaryOperator *op2 =
+      BinaryOperator::CreateLShr(opY, CONST(type, right), "", I);
+  BinaryOperator *op3 = BinaryOperator::CreateOr(op1, op2, "", I);
+  BinaryOperator *op4 = BinaryOperator::CreateXor(op3, constC, "", I);
+  // 用表达式 (x << left | y >> right) ^ c 替换原常量操作数
+  I->setOperand(i, op4);
 }
 
 void ConstEncryption::linearSubstitute(Instruction *I, int i) {
-      Module &M = *I->getModule();
-    ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
-    IntegerType *type = val->getType();
-    // 随机生成 x, y, a, b
-    uint64_t randX = cryptoutils->get_uint64_t(),
-            randY = cryptoutils->get_uint64_t();
-    uint64_t randA = cryptoutils->get_uint64_t(),
-            randB = cryptoutils->get_uint64_t();
-    // 计算 c = val - (ax + by)
-    APInt c = val->getValue() - (randA * randX + randB * randY);
-    ConstantInt *constX = CONST(type, randX);
-    ConstantInt *constY = CONST(type, randY);
-    ConstantInt *constA = CONST(type, randA);
-    ConstantInt *constB = CONST(type, randB);
-    ConstantInt *constC = (ConstantInt *)CONST(type, c);
-    // 创建全局变量 x, y
-    GlobalVariable *x = new GlobalVariable(
-        M, type, false, GlobalValue::PrivateLinkage, constX, "x");
-    GlobalVariable *y = new GlobalVariable(
-        M, type, false, GlobalValue::PrivateLinkage, constY, "y");
-    LoadInst *opX = new LoadInst(type, x, "", I);
-    LoadInst *opY = new LoadInst(type, y, "", I);
-    // 构造 op = ax + by + c 表达式
-    BinaryOperator *op1 = BinaryOperator::CreateMul(opX, constA, "", I);
-    BinaryOperator *op2 = BinaryOperator::CreateMul(opY, constB, "", I);
-    BinaryOperator *op3 = BinaryOperator::CreateAdd(op1, op2, "", I);
-    BinaryOperator *op4 = BinaryOperator::CreateAdd(op3, constC, "", I);
-    // 用表达式 ax + by + c 替换原常量操作数
-    I->setOperand(i, op4);
+  Module &M = *I->getModule();
+  ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
+  IntegerType *type = val->getType();
+  // 随机生成 x, y, a, b
+  uint64_t randX = cryptoutils->get_uint64_t(),
+           randY = cryptoutils->get_uint64_t();
+  uint64_t randA = cryptoutils->get_uint64_t(),
+           randB = cryptoutils->get_uint64_t();
+  // 计算 c = val - (ax + by)
+  APInt c = val->getValue() - (randA * randX + randB * randY);
+  ConstantInt *constX = CONST(type, randX);
+  ConstantInt *constY = CONST(type, randY);
+  ConstantInt *constA = CONST(type, randA);
+  ConstantInt *constB = CONST(type, randB);
+  ConstantInt *constC = (ConstantInt *)CONST(type, c);
+  // 创建全局变量 x, y
+  GlobalVariable *x = new GlobalVariable(
+      M, type, false, GlobalValue::PrivateLinkage, constX, "x");
+  GlobalVariable *y = new GlobalVariable(
+      M, type, false, GlobalValue::PrivateLinkage, constY, "y");
+  LoadInst *opX = new LoadInst(type, x, "", I);
+  LoadInst *opY = new LoadInst(type, y, "", I);
+  // 构造 op = ax + by + c 表达式
+  BinaryOperator *op1 = BinaryOperator::CreateMul(opX, constA, "", I);
+  BinaryOperator *op2 = BinaryOperator::CreateMul(opY, constB, "", I);
+  BinaryOperator *op3 = BinaryOperator::CreateAdd(op1, op2, "", I);
+  BinaryOperator *op4 = BinaryOperator::CreateAdd(op3, constC, "", I);
+  // 用表达式 ax + by + c 替换原常量操作数
+  I->setOperand(i, op4);
 }
 
 void ConstEncryption::substitute(Instruction *I) {
@@ -394,8 +414,9 @@ void ConstEncryption::substitute(Instruction *I) {
   }
 }
 
-bool ConstEncryption::runOnFunction(Function &F) {
+bool ConstEncryption::runOnFunction(Function &F, bool vm_fla) {
   CONTEXT = &F.getContext();
+  this->vm_flag = vm_fla;
   for (int i = 0; i < ObfConstTimes; i++) {
     for (BasicBlock &BB : F) {
       std::vector<Instruction *> origInst;
@@ -404,8 +425,8 @@ bool ConstEncryption::runOnFunction(Function &F) {
       }
       for (Instruction *I : origInst) {
         if (shouldEncryptConstant(I)) {
-          //I->print(errs());
-          //errs()<<"\r\n";
+          // I->print(errs());
+          // errs()<<"\r\n";
           substitute(I);
         }
       }
@@ -413,13 +434,13 @@ bool ConstEncryption::runOnFunction(Function &F) {
   }
   return true;
 }
-} // namespace
+} // namespace llvm
 
 PreservedAnalyses ConstObfuscationPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   ConstEncryption str;
   if (toObfuscate(RunConstObfuscationPass, &F, "const-obfus")) {
-    if (str.runOnFunction(F))
+    if (str.runOnFunction(F, false))
       return PreservedAnalyses::none();
   }
   return PreservedAnalyses::all();

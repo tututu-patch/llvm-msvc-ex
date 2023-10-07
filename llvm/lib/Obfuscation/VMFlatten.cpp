@@ -1,4 +1,6 @@
 #include "VMFlatten.h"
+
+#include "ConstObfuscation.h"
 #include "CryptoUtils.h"
 #include "Utils.h"
 
@@ -37,7 +39,13 @@ using namespace llvm;
 static cl::opt<bool>
     RunVmFlatObfuscationPass("vm-fla", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass"));
+static cl::opt<bool>
+    RunVmFlatObfuscationPassEnc("vm-fla-enc", cl::init(false),
+                             cl::desc("OLLVM - VmFlattenObfuscationPassEnc"));
 
+static cl::opt<bool>
+    RunVmFlatObfuscationPassSym("vm-fla-sym", cl::init(false),
+                             cl::desc("OLLVM - VmFlattenObfuscationPass Anti Sym and Taint"));
 static cl::opt<int> VmObfuProbRate(
     "vm-prob", cl::init(100),
     cl::desc("Choose the probability <vm-prob> for each basic blocks will "
@@ -77,6 +85,9 @@ struct VMFlat {
 
   void dump_inst(const std::vector<VMInst *> *all_inst) const;
   bool DoFlatten(Function *f);
+  void insertMemoryAttackTaint(Function &F);
+  void insertSymbolicMemorySnippet(Function &F);
+  void hex2i64(uint8_t *hex, uint32_t size, uint64_t *i64_arr);
   //bool DoFlattenEx(Function *f);
   //bool isPHINodeBranchInst(Instruction &insn);
   //// 构建不透明谓词
@@ -433,7 +444,8 @@ bool VMFlat::DoFlatten(Function *f) {
   IRB.CreateStore(op2, vm_pc);
   IRB.CreateBr(vm_entry);
 
-  fixStack(*f, false);
+
+   fixStack(*f,false);
   // std::vector<PHINode *> tmpPhi;
   // std::vector<Instruction *> tmpReg;
   // BasicBlock *bbEntry = &*f->begin();
@@ -467,6 +479,195 @@ bool VMFlat::DoFlatten(Function *f) {
    ////errs()<<"PHI end\r\n";
 #endif
   return true;
+}
+
+// ReSharper disable once CppMemberFunctionMayBeStatic
+[[maybe_unused]] void VMFlat::insertMemoryAttackTaint(Function &F) {
+  BasicBlock &entry = F.getEntryBlock();
+  IRBuilder<> irb(entry.getFirstNonPHIOrDbgOrLifetime());
+  ArrayType * array_table_type = ArrayType::get(irb.getInt8Ty(), 256);
+  Value *table1 = irb.CreateAlloca(array_table_type);
+  Value *table2 = irb.CreateAlloca(array_table_type);
+
+  Value *ptr1 = irb.CreateBitCast(table1, PointerType::get(ArrayType::get(irb.getInt64Ty(), 32),
+                                    dyn_cast<PointerType>(table1->getType())->getAddressSpace()));
+  Value *ptr2 = irb.CreateBitCast(table2, PointerType::get(ArrayType::get(irb.getInt64Ty(), 32),
+                                    dyn_cast<PointerType>(table2->getType())->getAddressSpace()));
+
+  uint8_t buf[256];
+  for (int i = 0; i < 256; i++) {
+    buf[i] = static_cast<uint8_t>(i);
+  }
+  const auto *p_buf = reinterpret_cast<uint64_t *>(buf);
+  for (int i = 0; i < (256 / 8); i++) {
+    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr1->getType(),ptr1, 0, i))->setVolatile(true);
+    irb.CreateStore(irb.getInt64(p_buf[i]), irb.CreateConstGEP2_64(ptr2->getType(),ptr2, 0, i))->setVolatile(true);
+  }
+
+  for (BasicBlock &BB: F) {
+    if (&BB == &entry) {
+      continue;
+    }
+    auto iter = BB.getFirstNonPHIOrDbgOrLifetime()->getIterator();
+    std::vector<Value *> int_list;
+    int_list.clear();
+    while (iter != BB.end()) {
+      //errs() << int_list.size();
+      Instruction &I = *iter;
+      if (!int_list.empty() && cryptoutils->get_uint32_t() % 3 == 2) {
+        for (int i = 0; i < I.getNumOperands(); i++) {
+          if (I.getOperand(i)->getType()->isIntegerTy() && !isa<Constant>(I.getOperand(i))) {
+            IRBuilder<> builder(&I);
+            const int r = cryptoutils->get_uint32_t() % int_list.size();
+            Value *v = int_list[r];
+            Value *index;
+            switch (dyn_cast<IntegerType>(v->getType())->getIntegerBitWidth()) {
+            case 8:
+              index = builder.CreateURem(v, builder.getInt8(127));
+              break;
+            case 16:
+              index = builder.CreateMul(v, builder.getInt16(cryptoutils->get_uint32_t() % 0xFFFF));
+              index = builder.CreateURem(index, builder.getInt16(0xFF));
+              break;
+            case 32:
+              index = builder.CreateXor(v, builder.CreateShl(v, cryptoutils->get_uint32_t() % 32));
+              index = builder.CreateAnd(index, builder.getInt32(0xFF));
+              break;
+            case 64:
+              index = builder.CreateXor(v, builder.CreateLShr(v,cryptoutils->get_uint32_t() % 64));
+              index = builder.CreateAnd(index, builder.getInt64(0xFF));
+              break;
+            }
+            Value *idx[2] = {builder.getInt32(0), index};
+            const auto x1_gep = builder.CreateGEP(array_table_type,table1, idx);
+            Value *x1 = builder.CreateLoad(x1_gep->getType(), x1_gep);
+            cast<LoadInst>(x1)->setVolatile(true);
+            const auto x2_gep = builder.CreateGEP(array_table_type,table2, idx);
+            Value *x2 = builder.CreateLoad(x2_gep->getType(), x2_gep);
+            cast<LoadInst>(x2)->setVolatile(true);
+            Value *z = builder.CreateSub(x1, x2);
+            z = builder.CreateAdd(I.getOperand(i), builder.CreateIntCast(z, I.getOperand(i)->getType(),
+                                    false));
+            I.setOperand(i, z);
+            break;
+          }
+        }
+      }
+      for (int i = 0; i < I.getNumOperands(); i++) {
+        if (I.getOperand(i)->getType()->isIntegerTy() && dyn_cast<IntegerType>(I.getOperand(i)->getType())->getBitWidth() >= 8
+            && dyn_cast<IntegerType>(I.getOperand(i)->getType())->getBitWidth() <= 64
+            && !isa<Constant>(I.getOperand(i))) {
+          int_list.push_back(I.getOperand(i));
+        }
+      }
+      iter = I.getIterator();
+      ++iter;
+    }
+  }
+}
+
+// ReSharper disable once CppInconsistentNaming
+[[maybe_unused]] void VMFlat::insertSymbolicMemorySnippet(Function &F) {
+  BasicBlock &entryBB = F.getEntryBlock();
+  IRBuilder<> builder(entryBB.getFirstNonPHIOrDbgOrLifetime());
+  const auto array_type =ArrayType::get(Type::getInt8Ty(F.getContext()), 256);
+  const auto array = builder.CreateAlloca(array_type);
+
+
+  //initialize the array
+  //array[i] = i
+  const auto i64_ptr_type =PointerType::get(ArrayType::get(builder.getInt64Ty(), 32),
+                                           dyn_cast<PointerType>(array->getType())->getAddressSpace());
+
+  Value *i64_ptr = builder.CreateBitCast(array,i64_ptr_type);
+
+  uint64_t i64_arr[256 / 8];
+  uint8_t buf[256];
+  for (int i = 0; i < 256; i++) {
+    buf[i] = static_cast<uint8_t>(i);
+  }
+  hex2i64(buf, 256, i64_arr);
+  for (int i = 0; i < (256 / 8); i++) {
+    builder.CreateStore(builder.getInt64(i64_arr[i]),
+                        builder.CreateConstGEP2_64(builder.getInt64Ty(),i64_ptr, 0, i))->setVolatile(true);
+  }
+
+
+  for (BasicBlock &bb: F) {
+    if (&bb == &entryBB) {
+      continue;
+    }
+
+    auto iter = bb.begin();
+    while (iter != bb.end()) {
+      Instruction &I = *iter;
+      for (int i = 0; i < I.getNumOperands(); i++) {
+        Value *v = I.getOperand(i);
+
+        int len_of_bytes;
+        if (v->getType()->isIntegerTy(32)) {
+          len_of_bytes = 4;
+        }
+        else if (v->getType()->isIntegerTy(64)) {
+          len_of_bytes = 8;
+        }
+        else {
+          continue;
+        }
+        if (isa<ConstantInt>(v)) {
+          continue;
+        }
+
+        IRBuilder<> builder(&I);
+        Value *bytes[8] = {nullptr};
+        Value *magic_ff;
+        Value *magic_0;
+        IntegerType *num_ty;
+        if (len_of_bytes == 4) {
+          magic_ff = builder.getInt32(0xFF);
+          magic_0 = builder.getInt32(0);
+          num_ty = builder.getInt32Ty();
+        }
+        else {
+          magic_ff = builder.getInt64(0xFF);
+          magic_0 = builder.getInt64(0);
+          num_ty = builder.getInt64Ty();
+        }
+
+        bytes[0] = builder.CreateAnd(v, magic_ff);
+
+        for (int j = 1; j < len_of_bytes; j++) {
+          bytes[j] = builder.CreateAnd(builder.CreateLShr(v, j * 8), magic_ff);
+        }
+
+        //bytes[i] = array[bytes[i]]
+        for (int j = 0; j < len_of_bytes; j++) {
+          Value *idx[2] = {magic_0, bytes[j]};
+          const auto load_value_gep =builder.CreateGEP(Type::getInt8Ty(F.getContext()),array, idx);
+          LoadInst *load_value = builder.CreateLoad(Type::getInt8Ty(F.getContext()),load_value_gep);
+          load_value->setVolatile(true);
+          bytes[j] = builder.CreateZExt(load_value, num_ty);
+        }
+
+        //bytes[0] = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24
+        for (int j = 1; j < len_of_bytes; j++) {
+          bytes[0] = builder.CreateOr(bytes[0], builder.CreateShl(bytes[j], j * 8));
+        }
+        //set the original operand as bytes[0]
+        I.setOperand(i, bytes[0]);
+        break;
+      }
+      iter = I.getIterator();
+      ++iter;
+    }
+    ;
+  }
+}
+
+void VMFlat::hex2i64(uint8_t *hex, uint32_t size, uint64_t *i64_arr) {
+  for (int i = 0; i < size; i += 8) {
+    i64_arr[i / 8] = *reinterpret_cast<uint64_t *>(hex + i);
+  }
 }
 
 //bool VMFlat::DoFlattenEx(Function *f) {
@@ -1024,7 +1225,22 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
     changed = DoFlatten(&function);
   }
   if (changed)
+  {
+    if(RunVmFlatObfuscationPassSym)
+    {
+      //insertMemoryAttackTaint(function);
+      insertSymbolicMemorySnippet(function);
+      //fixStack(function,false);
+    }
+    if(RunVmFlatObfuscationPassEnc)
+    {
+      ConstEncryption str;
+      str.runOnFunction(function,false);
+      //IndirectGlobalVars
+    }
+   
     turnOffOptimization(&function);
+  }
   // DoSplit(&function,4);
   return true;
 }

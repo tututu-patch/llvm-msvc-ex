@@ -23,6 +23,7 @@ https://github.com/wwh1004/ollvm-16
 ### 计划
 ```
 添加反符号执行(AntiSymbolExecute)和反内存追踪(AntiMemoryTaint)
+MBA-subs的bug
 移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
 ```
 
@@ -83,7 +84,7 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 ### 混淆例子
 Add To VS Project Compiler Cmdline
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -mba-subs -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-enc
 ```
 #### 需要修改载研究的部分
 ```
