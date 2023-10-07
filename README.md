@@ -13,11 +13,8 @@ https://github.com/gmh5225, 日天同学的llvm-msvc让人心情激动
 ```
 ### 参考
 ```
-https://github.com/KomiMoe/Arkari/tree/llvm-17.x
-https://github.com/AimiP02/BronyaObfus
-https://github.com/za233/LLVMMyPass
-https://github.com/DreamSoule/ollvm17
-https://github.com/wwh1004/ollvm-16
+https://github.com/gmh5225/awesome-llvm-security#ollvm
+
 ```
 
 ### 计划
