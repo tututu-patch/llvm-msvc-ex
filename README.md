@@ -21,11 +21,10 @@ https://github.com/wwh1004/ollvm-16
 ```
 
 ### 计划
-```
-添加反符号执行(AntiSymbolExecute)和反内存追踪(AntiMemoryTaint)
-MBA-subs的bug
-移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
-```
+- [x] 添加反符号执行和反内存追踪
+- [ ] MBA-subs的bug
+- [ ] 移植xVMP(LLVM18 IR重建xVMPInxx和处理PASS代码)
+
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
 [![GitHub license](https://img.shields.io/github/license/backengineering/llvm-msvc)](https://github.com/backengineering/llvm-msvc/blob/main/LICENSE)
