@@ -22,7 +22,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] vm-fla-enc 对vm-fla的部分数据加密
 - [ ] MBA-subs的bug
 - [ ] 移植xVMP
-- [ ] 在vm-fla-enc中使用间接全局变量访问
+- [x] 在vm-fla-enc中使用间接全局变量访问
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
