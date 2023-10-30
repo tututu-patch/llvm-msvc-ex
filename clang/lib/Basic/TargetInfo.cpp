@@ -521,8 +521,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 bool TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
-<<<<<<< HEAD
-=======
+
   // [MSVC Compatibility]
 /*
 #ifdef _WIN32
@@ -535,8 +534,7 @@ bool TargetInfo::initFeatureMap(
   setFeatureEnabled(Features, "fsgsbase", true);
 #endif
 */
-    
->>>>>>> 53964c486766ce810a2c9ee10cca6840adfbbe59
+
   for (const auto &F : FeatureVec) {
     StringRef Name = F;
     if (Name.empty())

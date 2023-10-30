@@ -875,10 +875,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
       // error.  This occurs with "x ## +"  and other stuff.  Return with LHSTok
       // unmodified and with RHS as the next token to lex.
       if (isInvalid) {
-<<<<<<< HEAD
-=======
 
->>>>>>> 53964c486766ce810a2c9ee10cca6840adfbbe59
 #ifdef _WIN32
         // It's OK on windows
         if (LHSTok.is(tok::amp))
