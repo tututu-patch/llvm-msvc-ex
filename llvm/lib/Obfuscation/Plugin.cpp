@@ -3,6 +3,7 @@
 #include "DataObfuscation.h"
 #include "Flattening.h"
 #include "IndirectCall.h"
+#include "IndirectGlobalVars.h"
 #include "MBAObfuscation.h"
 #include "SplitBasicBlock.h"
 #include "StringObfuscation.h"
@@ -39,6 +40,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
       
           MPM.addPass(createModuleToFunctionPassAdaptor(ConstObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
+          MPM.addPass(IngvObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
 
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
