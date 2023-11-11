@@ -31,25 +31,24 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 [![Github All Releases](https://img.shields.io/github/downloads/backengineering/llvm-msvc/total.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 [![GitHub release](https://img.shields.io/github/release/backengineering/llvm-msvc.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 
-llvm-msvc is a compiler based LLVM that is not restricted by MSVC. The goal is to have the same experience as MSVC on Windows.
-You can use naked functions anywhere, as well as add custom support such as obfuscation.
+llvm-msvc is a compiler based on LLVM that isn't limited by MSVC. The aim is to provide the same experience as MSVC on Windows. You can use naked functions anywhere and also add custom support like obfuscation.
 
 ## Features:
 - Compatible with MSVC syntax as much as possible.
-- Enhance SEH stability.
-- Add some special Intrinsic(``__vmx_vmread``/``__vmx_write``).
-- Support x64/ARM64 windows drivers.
-- Support naked X64 inline asm.
-- Support multiple cores compilation.
-- Support ``/MP`` when precompiled headers are present.
-- Support ``/GL`` (LTO optimization).
+- Improved SEH stability.
+- Added some special Intrinsic functions(``__vmx_vmread``/``__vmx_write``).
+- Supports x64/ARM64 windows drivers.
+- Allows naked X64 inline asm.
+- Enables multiple cores compilation.
+- Supports ``/MP`` when precompiled headers are present.
+- Supports ``/GL`` (LTO optimization).
 
 
 ## FAQ
 ### Why do we make this project?
-- Clang uses the GCC standard, MSVC has its own special syntax.
-- Some of the code is rather hacky. Unable to submit to official.
-- Waiting for official fix is ​​too long.
+- Clang follows the GCC standard, while MSVC has its own unique syntax.
+- Some of the code is pretty hacky. Can't submit it officially.
+- Waiting for the official fix takes too long.
 
 ### How to compile?
 
