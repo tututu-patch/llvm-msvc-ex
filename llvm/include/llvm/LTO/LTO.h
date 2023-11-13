@@ -110,7 +110,7 @@ class InputFile {
 public:
   class Symbol;
 
-private:
+public:
   // FIXME: Remove LTO class friendship once we have bitcode symbol tables.
   friend LTO;
   InputFile() = default;
@@ -301,7 +301,7 @@ public:
   /// by LTO but might not be visible from bitcode symbol table.
   static ArrayRef<const char*> getRuntimeLibcallSymbols();
 
-private:
+public:
   Config Conf;
 
   struct RegularLTOState {
