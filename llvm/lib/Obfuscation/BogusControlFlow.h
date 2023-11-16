@@ -24,4 +24,8 @@ public:
   static bool isRequired() { return true; }
 };
 } // namespace llvm
+namespace ollvm{
+  void bogus(llvm::Function &F);
+  bool doF(llvm::Module &M, llvm::Function &F);
+}
 #endif

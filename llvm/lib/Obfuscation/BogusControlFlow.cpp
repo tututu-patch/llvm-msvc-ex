@@ -131,7 +131,8 @@ STATISTIC(NumAddedBasicBlocks,
 STATISTIC(FinalNumBasicBlocks,
           "f. Final number of basic blocks in this module");
 
-namespace {
+namespace ollvm
+{
 // Options for the pass
 const int defaultObfRate = 30, defaultObfTime = 1;
 
@@ -670,21 +671,21 @@ bool doF(Module &M, Function &F) {
 PreservedAnalyses BogusControlFlowPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   // Check if the percentage is correct
-  if (ObfTimes <= 0) {
+  if (ollvm::ObfTimes <= 0) {
     errs() << "BogusControlFlow application number -bcf_loop=x must be x > 0";
     return PreservedAnalyses::all();
   }
 
   // Check if the number of applications is correct
-  if (!((ObfProbRate > 0) && (ObfProbRate <= 100))) {
+  if (!((ollvm::ObfProbRate > 0) && (ollvm::ObfProbRate <= 100))) {
     errs() << "BogusControlFlow application basic blocks percentage "
               "-bcf_prob=x must be 0 < x <= 100";
     return PreservedAnalyses::all();
   }
   // If fla annotations
-  if (toObfuscate(BogusControlFlow, &F, "bcf")) {
-    bogus(F);
-    doF(*F.getParent(), F);
+  if (toObfuscate(ollvm::BogusControlFlow, &F, "bcf")) {
+    ollvm::bogus(F);
+    ollvm::doF(*F.getParent(), F);
     return PreservedAnalyses::none();
   }
 

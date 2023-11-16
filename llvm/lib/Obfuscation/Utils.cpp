@@ -107,6 +107,7 @@ bool isMemberFunction(Function *F)
   if (demangled_name.find("::") != std::string::npos)
   {
     // 这个函数可能是类的成员
+    errs()<<"class func = "<<demangled_name<<"\r\n";
     return true;
   }
   return false;

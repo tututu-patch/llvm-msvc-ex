@@ -1,5 +1,6 @@
 #include "VMFlatten.h"
 
+#include "BogusControlFlow.h"
 #include "ConstObfuscation.h"
 #include "CryptoUtils.h"
 #include "Flattening.h"
@@ -220,7 +221,7 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 
 bool VMFlat::DoFlatten(Function *f) {
 
-  errs()<<"Function Name = "<<f->getName()<<"\r\n";
+  //errs()<<"Function Name = "<<f->getName()<<"\r\n";
   if (f->isDeclaration() || f->hasAvailableExternallyLinkage()){
     return false;
   }
@@ -229,7 +230,9 @@ bool VMFlat::DoFlatten(Function *f) {
   if(isMemberFunction(f)||f->getName().startswith("??") || f->getName().contains("std@") ||
       f->hasCXXEH() || f->hasCXXSEH())
   {
-   errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
+    //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
+    ollvm::bogus(*f);
+    ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
   }
 
