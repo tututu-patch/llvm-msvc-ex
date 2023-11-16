@@ -226,8 +226,11 @@ bool VMFlat::DoFlatten(Function *f) {
     return false;
   }
 
+  if(f->getName().startswith("??") || f->getName().contains("std@")) {
+    return false;
+  }
 
-  if(isMemberFunction(f)||f->getName().startswith("??") || f->getName().contains("std@") ||
+  if(isMemberFunction(f)||
       f->hasCXXEH() || f->hasCXXSEH())
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
@@ -243,6 +246,7 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
+    //重新进来
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return DoFlatten(f);
