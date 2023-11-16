@@ -77,13 +77,17 @@ bool isMemberFunction(Function *F) {
     // 获取函数的第一个参数
     llvm::Argument &arg = *(F->arg_begin());
 
+    const auto type = arg.getType();
+    if(!type)
+        return false;
     // 检查第一个参数是否是指针类型
-    if (!arg.getType()->isPointerTy())
+    if (!type->isPointerTy())
         return false;
 
     // 获取指针所指向的类型
-    llvm::Type *pointeeType = arg.getType()->getPointerElementType();
-
+    llvm::Type *pointeeType = type->getPointerElementType();
+    if(!pointeeType)
+        return false;
     // 如果指针指向的类型是结构体类型，那么这个函数可能是类的成员函数
     return pointeeType->isStructTy();
 }
