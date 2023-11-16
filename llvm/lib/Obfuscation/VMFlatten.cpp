@@ -243,7 +243,9 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    return false;
+    ollvm::bogus(*f);
+    ollvm::doF(*f->getParent(),*f);
+    return DoFlatten(f);
   }
 
 
