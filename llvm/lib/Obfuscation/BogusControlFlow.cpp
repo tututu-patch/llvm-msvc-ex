@@ -134,7 +134,7 @@ STATISTIC(FinalNumBasicBlocks,
 namespace ollvm
 {
 // Options for the pass
-const int defaultObfRate = 100, defaultObfTime = 2;
+const int defaultObfRate = 100, defaultObfTime = 1;
 
 cl::opt<bool> BogusControlFlow("bcf", cl::init(false),
                                cl::desc("Enable bogus control flow"));
