@@ -219,14 +219,19 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 }
 
 bool VMFlat::DoFlatten(Function *f) {
-  if (f->isDeclaration() || f->hasAvailableExternallyLinkage() ||
-      f->getName().startswith("??") || f->getName().contains("std@") ||
-      f->hasCXXEH() || f->hasCXXSEH()) {
+
+  errs()<<"Function Name = "<<f->getName()<<"\r\n";
+  if (f->isDeclaration() || f->hasAvailableExternallyLinkage()){
     return false;
   }
 
-  
-  
+
+  if(isMemberFunction(f)||f->getName().startswith("??") || f->getName().contains("std@") ||
+      f->hasCXXEH() || f->hasCXXSEH())
+  {
+   errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
+    return ollvm::flatten(*f);
+  }
 
   RUN_BLOCK = cryptoutils->get_uint32_t();
   JMP_BORING = RUN_BLOCK + 1;
@@ -640,9 +645,6 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   new_name_pre = std::to_string(cryptoutils->get_uint32_t());
   bool changed = false;
   if (static_cast<int32_t>(cryptoutils->get_range(100)) <= VmObfuProbRate) {
-    if(isMemberFunction(&function)){
-      return ollvm::flatten(function);
-    }
     changed = DoFlatten(&function);
   }
   if (changed)

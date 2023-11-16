@@ -25,6 +25,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(
               createModuleToFunctionPassAdaptor(BogusControlFlowPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(SubstitutionPass()));
+          MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(VmProtectPass()));
         });
@@ -41,8 +42,6 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(createModuleToFunctionPassAdaptor(ConstObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
           MPM.addPass(IngvObfuscationPass());
-          MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
-
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
         });
         //PB.registerVectorizerStartEPCallback(

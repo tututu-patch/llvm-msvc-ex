@@ -1,4 +1,6 @@
 #include "Utils.h"
+
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -69,27 +71,45 @@ std::string readAnnotate(Function *f) {
   return annotation;
 }
 
-bool isMemberFunction(Function *F) {
-    // 如果函数没有参数，那么它肯定不是类的成员函数
-    if (F->arg_size() == 0)
-        return false;
+bool isMemberFunction(Function *F)
+{
 
-    // 获取函数的第一个参数
-    llvm::Argument &arg = *(F->arg_begin());
+  //// 如果函数没有参数，那么它肯定不是类的成员函数
+  // if (F->arg_size() == 0)
+  //     return false;
 
-    const auto type = arg.getType();
-    if(!type)
-        return false;
-    // 检查第一个参数是否是指针类型
-    if (!type->isPointerTy())
-        return false;
+  //// 获取函数的第一个参数
+  // llvm::Argument &arg = *(F->arg_begin());
 
-    // 获取指针所指向的类型
-    llvm::Type *pointeeType = type->getPointerElementType();
-    if(!pointeeType)
-        return false;
-    // 如果指针指向的类型是结构体类型，那么这个函数可能是类的成员函数
-    return pointeeType->isStructTy();
+  // const auto type = arg.getType();
+  // if(!type)
+  //     return false;
+  //// 检查第一个参数是否是指针类型
+  // if (!type->isPointerTy())
+  //     return false;
+
+  // if(!type->getNumContainedTypes())
+  //     return false;
+  //// 获取指针所指向的类型
+  // llvm::Type *pointeeType = type->getPointerElementType();
+  // if(!pointeeType)
+  //     return false;
+
+  //// 如果指针指向的类型是结构体类型，那么这个函数可能是类的成员函数
+  // return pointeeType->isStructTy();
+
+  const std::string function_name = F->getName().str();
+
+  // 使用LLVM的Demangle函数解码mangled name
+  const std::string demangled_name = llvm::demangle(function_name);
+
+  // 检查解码后的名称是否包含类名和作用域解析操作符
+  if (demangled_name.find("::") != std::string::npos)
+  {
+    // 这个函数可能是类的成员
+    return true;
+  }
+  return false;
 }
 
 
