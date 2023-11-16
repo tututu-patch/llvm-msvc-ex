@@ -2,6 +2,7 @@
 
 #include "ConstObfuscation.h"
 #include "CryptoUtils.h"
+#include "Flattening.h"
 #include "IndirectGlobalVars.h"
 #include "Utils.h"
 
@@ -67,52 +68,34 @@ struct VMFlat {
   unsigned int JMP_BORING;
   unsigned int JMP_SELECT;
   std::string new_name_pre;
-  std::vector<BasicBlock *> *getBlocks(Function *function,
-                                       std::vector<BasicBlock *> *lists);
+  static std::vector<BasicBlock *> *get_blocks(Function *function,
+                                              std::vector<BasicBlock *> *lists);
 
-  unsigned int getUniqueNumber(const std::vector<unsigned int> *rand_list);
+  static unsigned int get_unique_number(const std::vector<unsigned int> *rand_list);
 
-  Node *newNode(unsigned int value);
+  static Node *new_node(unsigned int value);
 
-  VMInst *newInst(unsigned int type, unsigned int op1, unsigned int op2);
+  //BasicBlock* handle_first_basic_block(Function* f, std::vector<BasicBlock*>& orig_bb) const;
+
+  static VMInst *new_inst(unsigned int type, unsigned int op1, unsigned int op2);
 
   void create_node_inst(std::vector<VMInst *> *all_inst,
-                        std::map<Node *, unsigned int> *inst_map, Node *node);
+                        std::map<Node *, unsigned int> *inst_map, Node *node) const;
 
   void gen_inst(std::vector<VMInst *> *all_inst,
                 std::map<Node *, unsigned int> *inst_map, const Node *node);
 
-  Node *findBBNode(const BasicBlock *bb, const std::vector<Node *> *all_node);
+  static Node *find_bb_node(const BasicBlock *bb, const std::vector<Node *> *all_node);
 
   [[maybe_unused]] void dump_inst(const std::vector<VMInst *> *all_inst) const;
   bool DoFlatten(Function *f);
   void insertMemoryAttackTaint(Function &F);
   void insertSymbolicMemorySnippet(Function &F);
   void hex2i64(uint8_t *hex, uint32_t size, uint64_t *i64_arr);
-  //bool DoFlattenEx(Function *f);
-  //bool isPHINodeBranchInst(Instruction &insn);
-  //// 构建不透明谓词
-  //// dst原本是src的后继
-  //bool insert_opaque_predicate(BasicBlock *src, BasicBlock *dst);
-  ///* createAlteredBasicBlock
-  // *
-  // * This function return a basic block similar to a given one.
-  // * It's inserted just after the given basic block.
-  // * The instructions are similar but junk instructions are added between
-  // * the cloned one. The cloned instructions' phi nodes, metadatas, uses and
-  // * debug locations are adjusted to fit in the cloned basic block and
-  // * behave nicely.
-  // */
-  //BasicBlock *createAlteredBasicBlock(BasicBlock *basicBlock,
-  //                                    const Twine &Name = "gen");
-
-  //// 一元二次方程 ax^2 + bx + c = 0有解的前提是b^2 - 4ac > 0
-  //// 生成不满足该条件的a,b,c
-  //void get_a_b_c(int &a, int &b, int &c);
   bool runVmFlaOnFunction(Function &function);
 };
 
-std::vector<BasicBlock *> *VMFlat::getBlocks(Function *function,
+std::vector<BasicBlock *> *VMFlat::get_blocks(Function *function,
                                              std::vector<BasicBlock *> *lists) {
   lists->clear();
   for (BasicBlock &basicBlock : *function)
@@ -120,7 +103,7 @@ std::vector<BasicBlock *> *VMFlat::getBlocks(Function *function,
   return lists;
 }
 
-unsigned VMFlat::getUniqueNumber(const std::vector<unsigned> *rand_list) {
+unsigned VMFlat::get_unique_number(const std::vector<unsigned> *rand_list) {
   unsigned int num = cryptoutils->get_uint32_t();
   while (true) {
     bool state = true;
@@ -136,14 +119,38 @@ unsigned VMFlat::getUniqueNumber(const std::vector<unsigned> *rand_list) {
   return num;
 }
 
-VMFlat::Node *VMFlat::newNode(unsigned value) {
+VMFlat::Node *VMFlat::new_node(const unsigned value) {
   const auto node = static_cast<Node *>(malloc(sizeof(Node)));
   node->value = value;
   node->bb1 = node->bb2 = nullptr;
   return node;
 }
 
-VMFlat::VMInst *VMFlat::newInst(unsigned type, unsigned op1, unsigned op2) {
+//BasicBlock * VMFlat::handle_first_basic_block(Function *f,
+//    std::vector<BasicBlock *> &orig_bb) const {
+//   BasicBlock* old_entry = &*f->begin();
+//    orig_bb.erase(orig_bb.begin());
+//
+//    // If the terminator of the old entry is a conditional branch or has more than two successors,
+//    // split the old entry block just before terminator to create a new basic block.
+//   const auto old_entry_terminator = old_entry->getTerminator();
+//    if (isa<BranchInst>(old_entry_terminator) && cast<BranchInst>(old_entry_terminator)->isConditional() ||
+//        old_entry_terminator->getNumSuccessors() > 2) {
+//        auto split_point = old_entry->end();
+//        if (old_entry->size() > 1) {
+//            --split_point;
+//        }
+//        BasicBlock* split_block = old_entry->splitBasicBlock(split_point, new_name_pre + "FirstBB");
+//        orig_bb.insert(orig_bb.begin(), split_block);
+//        return split_block;
+//    }
+//
+//    // If the terminator is not a conditional branch and has at most two successors,
+//    // return the first successor as the first block.
+//    return old_entry_terminator->getSuccessor(0);
+//}
+
+VMFlat::VMInst *VMFlat::new_inst(unsigned type, unsigned op1, unsigned op2) {
   const auto code = static_cast<VMInst *>(malloc(sizeof(VMInst)));
   code->type = type;
   code->op1 = op1;
@@ -153,8 +160,8 @@ VMFlat::VMInst *VMFlat::newInst(unsigned type, unsigned op1, unsigned op2) {
 
 void VMFlat::create_node_inst(std::vector<VMInst *> *all_inst,
                               std::map<Node *, unsigned> *inst_map,
-                              Node *node) {
-  VMInst *code = newInst(RUN_BLOCK, node->value, 0);
+                              Node *node) const {
+  VMInst *code = new_inst(RUN_BLOCK, node->value, 0);
   all_inst->push_back(code);
   inst_map->insert(
       std::map<Node *, unsigned int>::value_type(node, all_inst->size() - 1));
@@ -169,11 +176,11 @@ void VMFlat::gen_inst(std::vector<VMInst *> *all_inst,
       gen_inst(all_inst, inst_map, node->bb1);
     } else {
       const unsigned int addr = inst_map->find(node->bb1)->second * 3;
-      VMInst *code = newInst(JMP_BORING, addr, 0);
+      VMInst *code = new_inst(JMP_BORING, addr, 0);
       all_inst->push_back(code);
     }
   } else if (node->bb2 != nullptr) {
-    VMInst *code = newInst(JMP_SELECT, 0, 0);
+    VMInst *code = new_inst(JMP_SELECT, 0, 0);
     all_inst->push_back(code);
     if (inst_map->count(node->bb1) == 0) {
       create_node_inst(all_inst, inst_map, node->bb1);
@@ -189,7 +196,7 @@ void VMFlat::gen_inst(std::vector<VMInst *> *all_inst,
     return;
 }
 
-VMFlat::Node *VMFlat::findBBNode(const BasicBlock *bb,
+VMFlat::Node *VMFlat::find_bb_node(const BasicBlock *bb,
                                  const std::vector<Node *> *all_node) {
   for (const auto &i : *all_node) {
     if (bb == i->data)
@@ -212,27 +219,30 @@ void VMFlat::dump_inst(const std::vector<VMInst *> *all_inst) const {
 }
 
 bool VMFlat::DoFlatten(Function *f) {
-  // errs() << f->getName().data() << "\r\n";
-  if (f->getName().startswith("??")) {
-    return false;
+  if (f->isDeclaration() || f->hasAvailableExternallyLinkage() ||
+      f->getName().startswith("??") || f->getName().contains("std@") ||
+      f->hasCXXEH() || f->hasCXXSEH()||isMemberFunction(f)) {
+    return ollvm::flatten(*f);
   }
-  if (f->getName().contains("std@")) {
-    return false;
-  }
-  if (f->hasCXXEH() || f->hasCXXSEH()) {
-    return false;
-  }
+
+  
+
   RUN_BLOCK = cryptoutils->get_uint32_t();
   JMP_BORING = RUN_BLOCK + 1;
   JMP_SELECT = RUN_BLOCK + 2;
 
   std::vector<BasicBlock *> orig_bb;
-  getBlocks(f, &orig_bb);
+  get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
     return false;
   }
+
+
+
   // errs() << "Count 1 = " << orig_bb.size() << "\r\n";
   //   unsigned int rand_val = seed;
+  #if 1
+  //First
   auto tmp = f->begin();
   BasicBlock *old_entry = &*tmp;
   orig_bb.erase(orig_bb.begin());
@@ -254,13 +264,15 @@ bool VMFlat::DoFlatten(Function *f) {
     firstbb = splited;
     orig_bb.insert(orig_bb.begin(), splited);
   }
+  #endif
+
   std::vector<Node *> all_node;
   // unsigned int val=0;
   std::vector<unsigned int> rand_list;
   for (auto &i : orig_bb) {
-    unsigned int num = getUniqueNumber(&rand_list);
+    unsigned int num = get_unique_number(&rand_list);
     rand_list.push_back(num);
-    Node *tmp1 = newNode(num);
+    Node *tmp1 = new_node(num);
     all_node.push_back(tmp1);
     tmp1->data = i;
   }
@@ -273,12 +285,12 @@ bool VMFlat::DoFlatten(Function *f) {
     if (bb->getTerminator()->getNumSuccessors() == 2) {
       BasicBlock *bb1 = bb->getTerminator()->getSuccessor(0),
                  *bb2 = bb->getTerminator()->getSuccessor(1);
-      Node *n1 = findBBNode(bb1, &all_node), *n2 = findBBNode(bb2, &all_node);
+      Node *n1 = find_bb_node(bb1, &all_node), *n2 = find_bb_node(bb2, &all_node);
       tmp->bb1 = n1;
       tmp->bb2 = n2;
     } else if (bb->getTerminator()->getNumSuccessors() == 1) {
       BasicBlock *bb1 = bb->getTerminator()->getSuccessor(0);
-      Node *n = findBBNode(bb1, &all_node);
+      Node *n = find_bb_node(bb1, &all_node);
       tmp->bb1 = n;
     } else {
       continue;
@@ -287,8 +299,9 @@ bool VMFlat::DoFlatten(Function *f) {
     // j=all_node.begin();j!=all_node.end();j++)
   }
 
-  Node *start = findBBNode(firstbb, &all_node);
-  Node *fake = newNode(0x7FFFFFFF);
+
+  Node *start = find_bb_node(firstbb, &all_node);
+  Node *fake = new_node(0x7FFFFFFF);
   std::vector<VMInst *> all_inst;
   std::map<Node *, unsigned int> inst_map;
   fake->bb1 = start;
@@ -366,31 +379,6 @@ bool VMFlat::DoFlatten(Function *f) {
   // create run_block's basicblock
   // the first choice
   IRB.SetInsertPoint(run_block);
-#if 0
-    std::vector<Constant *> bb_addrs;
-    for (std::vector<BasicBlock *>::iterator b = origBB.begin();
-         b != origBB.end(); b++) {
-        BasicBlock *block = *b;
-        bb_addrs.push_back(BlockAddress::get(block));
-    }
-    ArrayType *AT_ =
-        ArrayType::get(Type::getInt8PtrTy(f->getContext()), bb_addrs.size());
-    Constant *addr_array =
-        ConstantArray::get(AT_, ArrayRef<Constant *>(bb_addrs));
-    GlobalVariable *address_arr_var = new GlobalVariable(
-        *(f->getParent()), AT_, false,
-        GlobalValue::LinkageTypes::PrivateLinkage, addr_array, "address_table");
-    auto load_gep =IRB.CreateGEP(address_arr_var->getValueType(),address_arr_var, {zero, op1});
-    Value *load =
-        IRB.CreateLoad(load_gep->getType(),load_gep, "address");
-    IndirectBrInst *indirBr =
-        IndirectBrInst::Create(load, bb_addrs.size(), run_block);
-    for (std::vector<BasicBlock *>::iterator b = origBB.begin();
-         b != origBB.end(); b++) {
-        BasicBlock *block = *b;
-        indirBr->addDestination(block);
-    }
-#endif
   // the seconde choice
   SwitchInst *switch2 = IRB.CreateSwitch(op1, defaultCase, 0);
   // errs() << "the seconde choice start\r\n";
@@ -398,7 +386,7 @@ bool VMFlat::DoFlatten(Function *f) {
        b != orig_bb.end(); b++) {
     BasicBlock *block = *b;
     block->moveBefore(defaultCase);
-    Node *t = findBBNode(block, &all_node);
+    Node *t = find_bb_node(block, &all_node);
     // ConstantInt *numCase =
     // cast<ConstantInt>(ConstantInt::get(switch2->getCondition()->getType(),
     // t->value));
@@ -446,39 +434,7 @@ bool VMFlat::DoFlatten(Function *f) {
   IRB.CreateBr(vm_entry);
 
 
-   fixStack(*f,false);
-  // std::vector<PHINode *> tmpPhi;
-  // std::vector<Instruction *> tmpReg;
-  // BasicBlock *bbEntry = &*f->begin();
-#if 0
-   ////errs()<<"the PHI start\r\n";
-
-    //do{
-    //  ////errs()<<"Fix Stack\r\n";
-    //    tmpPhi.clear();
-    //    tmpReg.clear();
-    //    for (Function::iterator i = f->begin(); i != f->end(); i++){
-    //        for (BasicBlock::iterator j = i->begin(); j != i->end(); j++){
-    //            if (isa<PHINode>(j)){
-    //                PHINode *phi = cast<PHINode>(j);
-    //                tmpPhi.push_back(phi);
-    //                continue;
-    //            }
-    //            if (!(isa<AllocaInst>(j) && j->getParent() == bbEntry) && (valueEscapes(&*j) || j->isUsedOutsideOfBlock(&*i))){
-    //                tmpReg.push_back(&*j);
-    //                continue;
-    //            }
-    //        }
-    //    }
-    //    for (unsigned int i = 0; i < tmpReg.size(); i++){
-    //        DemoteRegToStack(*tmpReg.at(i));
-    //    }
-    //    for (unsigned int i = 0; i < tmpPhi.size(); i++){
-    //        DemotePHIToStack(tmpPhi.at(i));
-    //    }
-    //} while (tmpReg.size() != 0 || tmpPhi.size() != 0);
-   ////errs()<<"PHI end\r\n";
-#endif
+  fixStack(*f,false);
   return true;
 }
 
@@ -673,548 +629,6 @@ void VMFlat::hex2i64(uint8_t *hex, uint32_t size, uint64_t *i64_arr) {
   }
 }
 
-//bool VMFlat::DoFlattenEx(Function *f) {
-//
-//  if (f->isDeclaration()) {
-//    return false;
-//  }
-//
-//  // Check external linkage
-//  if (f->hasAvailableExternallyLinkage() != 0) {
-//    return false;
-//  }
-//
-//  errs() << f->getName().data() << "\r\n";
-//
-//
-//  BasicBlock *fn_new_entry_bb =
-//      BasicBlock::Create(f->getContext(), Twine(new_name_pre + "fn_entry"), f,
-//                         &f->getEntryBlock());
-//
-//  std::vector<BasicBlock *> toearse_bbs;
-//  int count = 0;
-//  for (BasicBlock &origin_bb : *f) {
-//    std::string name = new_name_pre +"OriginBB" + std::to_string(count++);
-//    origin_bb.setName(name);
-//    errs() << origin_bb << "\n";
-//    if (!origin_bb.empty()) {
-//      // PHI NODE肯定位于block的第一条件指令
-//      Instruction &insn = *(origin_bb.begin());
-//      if (isa<PHINode>(insn)) {
-//        errs() << "Processing bb has PHINODE\n";
-//        continue;
-//      }
-//
-//      if (origin_bb.size() <= 2) {
-//        errs() << "BB size less than 2\n";
-//        continue;
-//      }
-//    }
-//
-//    // exception handler block不处理
-//    if (origin_bb.empty() || origin_bb.isEHPad())
-//      continue;
-//
-//    LLVMContext &context = origin_bb.getContext();
-//    IRBuilder<> builder(context);
-//
-//    // VMInterpreterBody
-//    BasicBlock *VMInterpreterbody_bb =
-//        BasicBlock::Create(context, "", f, &origin_bb);
-//    // VMInterpreter
-//    BasicBlock *VMInterpreter_bb =
-//        BasicBlock::Create(context, "", f, VMInterpreterbody_bb);
-//    // 先创建初始化向量表的block
-//    BasicBlock *entry_bb =
-//        BasicBlock::Create(context, "", f, VMInterpreter_bb);
-//
-//    std::vector<BasicBlock *> handlerbb_list;
-//    // PC向量表
-//    std::vector<ConstantInt *> switch_elems;
-//    std::vector<Constant *> const_array_elems;
-//    // 为解决变量生命周期问题，为每一条指令都申请一个变量
-//    std::vector<Value *> var_declare;
-//    size_t split_bb_num = 0;
-//
-//    while (!origin_bb.empty()) {
-//      auto first_insn = origin_bb.begin();
-//      unsigned int insn_opcode = first_insn->getOpcode();
-//      if (insn_opcode == Instruction::Alloca) // 变量声明不混淆，放在entry
-//      {
-//        fn_new_entry_bb->getInstList().splice(
-//            fn_new_entry_bb->end(), origin_bb.getInstList(), first_insn);
-//        errs()<<"found Alloca"<<"\r\n";
-//        continue;
-//      }
-//
-//      // 对于跳转到PHINODE的指令，不切割成一个单独的bb，放到前一个指令的bb
-//      if (isPHINodeBranchInst(*first_insn)) {
-//        BasicBlock *bb = *handlerbb_list.rbegin();
-//        // 移除上一次添加的br
-//        bb->getTerminator()->eraseFromParent();
-//        bb->getInstList().splice(bb->end(), origin_bb.getInstList(),
-//                                 first_insn);
-//        bb->replaceSuccessorsPhiUsesWith(&origin_bb, bb);
-//      } else {
-//        ++split_bb_num;
-//        BasicBlock *new_bb =
-//            BasicBlock::Create(context, "", f, &origin_bb);
-//        new_bb->getInstList().splice(new_bb->end(), origin_bb.getInstList(),
-//                                     first_insn);
-//
-//        if (!new_bb->begin()->isTerminator()) {
-//          builder.SetInsertPoint(new_bb, new_bb->end());
-//          builder.CreateBr(VMInterpreterbody_bb);
-//        }
-//        // else
-//        //{
-//        //     new_bb->replaceSuccessorsPhiUsesWith(&originBB, new_bb);
-//        // }
-//        int code = cryptoutils->get_uint32_t();
-//        switch_elems.push_back(
-//            ConstantInt::get(Type::getInt32Ty(context), code));
-//        const_array_elems.push_back(
-//            ConstantInt::get(Type::getInt32Ty(context), code));
-//        handlerbb_list.push_back(new_bb);
-//      }
-//    }
-//
-//    for (size_t i = 0; i < handlerbb_list.size(); ++i) {
-//      BasicBlock *bb = handlerbb_list[i];
-//      for (Instruction &insn : *bb) {
-//        //获取指令返回值
-//        Value *returnval = llvm::cast<Value>(&insn);
-//        // 指令返回值下面有引用
-//        if (returnval->hasNUsesOrMore(1)) {
-//          std::vector<BasicBlock *> returnval_users;
-//          for (auto user : returnval->users()) {
-//            // 找到引用此变量的指令
-//            Instruction *insn = llvm::cast<Instruction>(user);
-//            // 如果该指令不是PHINODE
-//            if (!isa<PHINode>(*insn)) {
-//              BasicBlock *that_bb = insn->getParent();
-//              // 找出不在当前bb的引用
-//              if (that_bb != bb) {
-//                returnval_users.push_back(that_bb);
-//              }
-//            }
-//          }
-//
-//          if (!returnval_users.empty()) {
-//            // 在entry新声明一个变量
-//            builder.SetInsertPoint(fn_new_entry_bb, fn_new_entry_bb->end());
-//            errs()<<returnval->getType()->getTypeID()<<"\r\n";
-//            Value *tmpPtr = builder.CreateAlloca(returnval->getType());
-//            // 在new_bb中对此变量赋值, 并将该指令返回值的所有使用处替换为该变量
-//            BasicBlock::iterator p = bb->end();
-//            --p;
-//            builder.SetInsertPoint(bb, p);
-//            builder.CreateStore(returnval, tmpPtr);
-//
-//            for (BasicBlock *ele_bb : returnval_users) {
-//              builder.SetInsertPoint(ele_bb, ele_bb->begin());
-//              Value *replace = builder.CreateLoad(tmpPtr->getType(), tmpPtr);
-//
-//              // 获取ele_bb的位置
-//              int ele_bb_id = -1;
-//              for (size_t j = 0; j < handlerbb_list.size(); ++j) {
-//                if (handlerbb_list[j] == ele_bb) {
-//                  ele_bb_id = j;
-//                  break;
-//                }
-//              }
-//
-//              returnval->replaceUsesWithIf(
-//                  replace, [handlerbb_list, ele_bb_id](Use &U) {
-//                    auto *I = dyn_cast<Instruction>(U.getUser());
-//                    if (I == nullptr)
-//                      return true;
-//                    // 仅替换当前bb后面bb引用的变量，否则产生BUG!!
-//                    for (size_t j = ele_bb_id;
-//                         ele_bb_id > 0 && j < handlerbb_list.size(); ++j) {
-//                      if (handlerbb_list[j] == I->getParent()) {
-//                        return true;
-//                      }
-//                    }
-//                    return false;
-//                  });
-//            }
-//          }
-//        }
-//
-//        // 每次循环都把所有的block打印一遍
-//        /*
-//        errs() << "=======================================\n";
-//        for(size_t j = 0; j < handlerbb_list.size(); ++j)
-//        {
-//            errs() << * handlerbb_list[j] << "\n";
-//        }
-//        errs() << "+++++++++++++++++++++++++++++++++++++++\n";
-//        */
-//      }
-//    }
-//
-//    toearse_bbs.push_back(&origin_bb);
-//
-//    ArrayType *array_type =
-//        ArrayType::get(Type::getInt32Ty(context), split_bb_num);
-//    GlobalVariable *opcodes = new GlobalVariable(
-//        *f->getParent(),
-//        /*Type=*/array_type,
-//        /*isConstant=*/true,
-//        /*Linkage=*/GlobalValue::PrivateLinkage,
-//        /*Initializer=*/0, // has initializer, specified below
-//        /*Name=*/Twine(new_name_pre + "opcodes"));
-//    opcodes->setAlignment(MaybeAlign(4));
-//    opcodes->setInitializer(ConstantArray::get(array_type, const_array_elems));
-//    //errs() << *opcodes << "\n";
-//
-//    // alloca集中放在入口
-//    builder.SetInsertPoint(fn_new_entry_bb, fn_new_entry_bb->end());
-//    Value *opcodesPtr = builder.CreateAlloca(
-//        Type::getInt32Ty(context)->getPointerTo(), nullptr, Twine(new_name_pre + "opcodesPtr"));
-//    Value *i_alloc =
-//        builder.CreateAlloca(Type::getInt32Ty(context), nullptr, Twine(new_name_pre + "i_alloc"));
-//
-//    // entry
-//    builder.SetInsertPoint(entry_bb, entry_bb->end());
-//    Value *opcodesGVCast = builder.CreateBitCast(
-//        opcodes, Type::getInt32Ty(context)->getPointerTo(), Twine(new_name_pre + "opcodesGVCast"));
-//    builder.CreateStore(opcodesGVCast, opcodesPtr);
-//    builder.CreateBr(VMInterpreter_bb);
-//    // 替换originBB前驱后继为entry_bb
-//    origin_bb.replaceAllUsesWith(entry_bb);
-//
-//    // VMInterpreter
-//    builder.SetInsertPoint(VMInterpreter_bb);
-//    // 创建变量i并创始化为0
-//    Value *con0 = ConstantInt::get(Type::getInt32Ty(context), 0);
-//    builder.CreateStore(con0, i_alloc);
-//    builder.CreateBr(VMInterpreterbody_bb);
-//
-//    // VMInterperterBody
-//    builder.SetInsertPoint(VMInterpreterbody_bb);
-//    Value *loaded_i =
-//        builder.CreateLoad(Type::getInt32Ty(context), i_alloc, Twine(new_name_pre + "load_i"));
-//    Value *con1 = ConstantInt::get(Type::getInt32Ty(context), 1);
-//    Value *increased_i = builder.CreateAdd(loaded_i, con1, Twine(new_name_pre + "increased_i"));
-//    builder.CreateStore(increased_i, i_alloc);
-//    Value *loadedOpcodePtr = builder.CreateLoad(opcodesPtr->getType(),
-//                                                opcodesPtr, Twine(new_name_pre + "loadedOpcodePtr"));
-//    Value *opcodesIdx = builder.CreateGEP(
-//        Type::getInt32Ty(context), loadedOpcodePtr, loaded_i, Twine(new_name_pre + "opcodesIdx"));
-//    Value *loadedOpcode =
-//        builder.CreateLoad(opcodesIdx->getType(), opcodesIdx, Twine(new_name_pre + "loadedOpcode"));
-//    // 创建switch语句
-//    SwitchInst *switch_inst =
-//        builder.CreateSwitch(loadedOpcode, VMInterpreterbody_bb, split_bb_num);
-//    for (size_t i = 0; i < split_bb_num; ++i) {
-//      switch_inst->addCase(switch_elems[i], handlerbb_list[i]);
-//    }
-//
-//    // errs() << *entry_bb << "\n";
-//    // errs() << *VMInterpreter_bb << "\n";
-//    // errs() << *VMInterpreterbody_bb << "\n";
-//  }
-//
-//  for (auto &bb : toearse_bbs) {
-//    bb->eraseFromParent();
-//  }
-//
-//  // 将新entry串进去
-//  {
-//    IRBuilder<> builder(f->getContext());
-//    builder.SetInsertPoint(fn_new_entry_bb, fn_new_entry_bb->end());
-//    builder.CreateBr(fn_new_entry_bb->getNextNode());
-//  }
-//
-//  std::vector<BasicBlock *> all_bbs;
-//  for (BasicBlock &bb : *f) {
-//    all_bbs.push_back(&bb);
-//  }
-//
-//  for (auto *bb : all_bbs) {
-//    if (cryptoutils->get_uint8_t() % 2 == 0) {
-//      if (bb->getTerminator()->getNumSuccessors() == 1) {
-//        insert_opaque_predicate(bb, bb->getSingleSuccessor());
-//      }
-//    }
-//  }
-//
-//  return true;
-//}
-//
-//bool VMFlat::isPHINodeBranchInst(Instruction &insn) {
-//  if (isa<BranchInst>(insn)) {
-//    const auto bran_inst = cast<BranchInst>(&insn);
-//    for (auto *succ : bran_inst->successors()) {
-//      auto first_insn = succ->begin();
-//      if (isa<PHINode>(*first_insn))
-//        return true;
-//    }
-//  }
-//  return false;
-//}
-//
-//bool VMFlat::insert_opaque_predicate(BasicBlock *src, BasicBlock *dst) {
-//  if (src == nullptr || dst == nullptr || dst->empty())
-//    return false;
-//
-//  auto *terminator = src->getTerminator();
-//  if (isa<BranchInst>(terminator)) {
-//    if (const auto inst = cast<BranchInst>(terminator); inst->isConditional()) {
-//      return false;
-//    }
-//  }
-//
-//  // dst如果是phinode也不插
-//  if (const auto first = dst->begin(); isa<PHINode>(&(*first))) {
-//    return false;
-//  }
-//
-//  LLVMContext &context = src->getContext();
-//  IRBuilder<> builder(context);
-//
-//  // 清除结尾br
-//  terminator->eraseFromParent();
-//  // 创建junk bb
-//  BasicBlock *junk_bb = createAlteredBasicBlock(dst);
-//
-//  // 构造不透明谓词
-//  builder.SetInsertPoint(src, src->end());
-//  int a, b, c;
-//  get_a_b_c(a, b, c);
-//  Value *con_a = ConstantInt::get(Type::getInt32Ty(context), a);
-//  Value *con_b = ConstantInt::get(Type::getInt32Ty(context), b);
-//  Value *con_c = ConstantInt::get(Type::getInt32Ty(context), c);
-//  Value *con_0 = ConstantInt::get(Type::getInt32Ty(context), 0);
-//  // a*x^2+b*x+c==0
-//  Value *x = builder.CreateAlloca(Type::getInt32Ty(context));
-//  builder.CreateLifetimeStart(x);
-//  Value *x_load = builder.CreateLoad(Type::getInt32Ty(context), x);
-//  Value *xx = builder.CreateMul(x_load, x_load);
-//  Value *axx = builder.CreateMul(xx, con_a);
-//  Value *bx = builder.CreateMul(x_load, con_b);
-//  Value *add1 = builder.CreateAdd(axx, bx);
-//  Value *add2 = builder.CreateAdd(add1, con_c);
-//
-//  Value *cmp = builder.CreateCmp(CmpInst::Predicate::ICMP_NE, add2, con_0);
-//  builder.CreateLifetimeEnd(x);
-//  builder.CreateCondBr(cmp, dst, junk_bb);
-//  return true;
-//}
-//
-//BasicBlock *VMFlat::createAlteredBasicBlock(BasicBlock *basicBlock,
-//                                            const Twine &Name) {
-//  // Useful to remap the informations concerning instructions.
-//  ValueToValueMapTy VMap;
-//  BasicBlock *alteredBB = BasicBlock::Create(
-//      basicBlock->getContext(), "", basicBlock->getParent(), basicBlock);
-//  alteredBB->moveAfter(basicBlock);
-//
-//  for (auto &insn : *basicBlock) {
-//    Instruction *clone_insn = insn.clone();
-//    alteredBB->getInstList().push_back(clone_insn);
-//    VMap[&insn] = clone_insn;
-//  }
-//
-//  // Remap operands.
-//  auto ji = basicBlock->begin();
-//  for (auto i = alteredBB->begin(), e = alteredBB->end();
-//       i != e; ++i) {
-//    // Loop over the operands of the instruction
-//    for (User::op_iterator opi = i->op_begin(), ope = i->op_end(); opi != ope;
-//         ++opi) {
-//      // get the value for the operand
-//      Value *v = MapValue(*opi, VMap, RF_None, nullptr);
-//      if (v != nullptr) {
-//        *opi = v;
-//      }
-//    }
-//    // Remap phi nodes' incoming blocks.
-//    if (PHINode *pn = dyn_cast<PHINode>(i)) {
-//      for (unsigned j = 0, e = pn->getNumIncomingValues(); j != e; ++j) {
-//        Value *v = MapValue(pn->getIncomingBlock(j), VMap, RF_None, nullptr);
-//        if (v != nullptr) {
-//          pn->setIncomingBlock(j, cast<BasicBlock>(v));
-//        }
-//      }
-//    }
-//    // Remap attached metadata.
-//    SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-//    i->getAllMetadata(MDs);
-//    // important for compiling with DWARF, using option -g.
-//    i->setDebugLoc(ji->getDebugLoc());
-//    ji++;
-//  } // The instructions' informations are now all correct
-//
-//  // add random instruction in the middle of the bloc. This part can be improve
-//  for (auto i = alteredBB->begin(), e = alteredBB->end();
-//       i != e; ++i) {
-//    // in the case we find binary operator, we modify slightly this part by
-//    // randomly insert some instructions
-//    if (i->isBinaryOp()) { // binary instructions
-//      const unsigned opcode = i->getOpcode();
-//      BinaryOperator *op, *op1 = NULL;
-//      const Twine *var = new Twine("_");
-//      // treat differently float or int
-//      // Binary int
-//      if (opcode == Instruction::Add || opcode == Instruction::Sub ||
-//          opcode == Instruction::Mul || opcode == Instruction::UDiv ||
-//          opcode == Instruction::SDiv || opcode == Instruction::URem ||
-//          opcode == Instruction::SRem || opcode == Instruction::Shl ||
-//          opcode == Instruction::LShr || opcode == Instruction::AShr ||
-//          opcode == Instruction::And || opcode == Instruction::Or ||
-//          opcode == Instruction::Xor) {
-//        for (auto random = cryptoutils->get_uint32_t() % 10; random < 10; ++random) {
-//          switch (cryptoutils->get_uint32_t() % 4) { // to improve
-//          case 0:                       // do nothing
-//            break;
-//          case 1:
-//            op = BinaryOperator::CreateNeg(i->getOperand(0), *var, &*i);
-//            op1 = BinaryOperator::Create(Instruction::Add, op, i->getOperand(1),
-//                                         "gen", &*i);
-//            break;
-//          case 2:
-//            op1 = BinaryOperator::Create(Instruction::Sub, i->getOperand(0),
-//                                         i->getOperand(1), *var, &*i);
-//            op = BinaryOperator::Create(Instruction::Mul, op1, i->getOperand(1),
-//                                        "gen", &*i);
-//            break;
-//          case 3:
-//            op = BinaryOperator::Create(Instruction::Shl, i->getOperand(0),
-//                                        i->getOperand(1), *var, &*i);
-//            break;
-//          }
-//        }
-//      }
-//      // Binary float
-//      if (opcode == Instruction::FAdd || opcode == Instruction::FSub ||
-//          opcode == Instruction::FMul || opcode == Instruction::FDiv ||
-//          opcode == Instruction::FRem) {
-//        for (int random = cryptoutils->get_uint32_t() % 10; random < 10; ++random) {
-//          switch (cryptoutils->get_uint32_t() % 3) { // can be improved
-//          case 0:                       // do nothing
-//            break;
-//          case 1:
-//            op = BinaryOperator::CreateFDiv(i->getOperand(0), i->getOperand(1),
-//                                            *var, &*i);
-//            op1 = BinaryOperator::Create(Instruction::FAdd, op,
-//                                         i->getOperand(1), "gen", &*i);
-//            break;
-//          case 2:
-//            op = BinaryOperator::Create(Instruction::FSub, i->getOperand(0),
-//                                        i->getOperand(1), *var, &*i);
-//            op1 = BinaryOperator::Create(Instruction::FMul, op,
-//                                         i->getOperand(1), "gen", &*i);
-//            break;
-//          }
-//        }
-//      }
-//      if (opcode == Instruction::ICmp) { // Condition (with int)
-//        const auto currentI = reinterpret_cast<ICmpInst *>(&i);
-//        switch (cryptoutils->get_uint32_t() % 3) { // must be improved
-//        case 0:                       // do nothing
-//          break;
-//        case 1:
-//          currentI->swapOperands();
-//          break;
-//        case 2: // randomly change the predicate
-//          switch (cryptoutils->get_uint32_t() % 10) {
-//          case 0:
-//            currentI->setPredicate(ICmpInst::ICMP_EQ);
-//            break; // equal
-//          case 1:
-//            currentI->setPredicate(ICmpInst::ICMP_NE);
-//            break; // not equal
-//          case 2:
-//            currentI->setPredicate(ICmpInst::ICMP_UGT);
-//            break; // unsigned greater than
-//          case 3:
-//            currentI->setPredicate(ICmpInst::ICMP_UGE);
-//            break; // unsigned greater or equal
-//          case 4:
-//            currentI->setPredicate(ICmpInst::ICMP_ULT);
-//            break; // unsigned less than
-//          case 5:
-//            currentI->setPredicate(ICmpInst::ICMP_ULE);
-//            break; // unsigned less or equal
-//          case 6:
-//            currentI->setPredicate(ICmpInst::ICMP_SGT);
-//            break; // signed greater than
-//          case 7:
-//            currentI->setPredicate(ICmpInst::ICMP_SGE);
-//            break; // signed greater or equal
-//          case 8:
-//            currentI->setPredicate(ICmpInst::ICMP_SLT);
-//            break; // signed less than
-//          case 9:
-//            currentI->setPredicate(ICmpInst::ICMP_SLE);
-//            break; // signed less or equal
-//          }
-//          break;
-//        }
-//      }
-//      if (opcode == Instruction::FCmp) { // Conditions (with float)
-//        const auto currentI = reinterpret_cast<FCmpInst *>(&i);
-//        switch (cryptoutils->get_uint32_t() % 3) { // must be improved
-//        case 0:                       // do nothing
-//          break;
-//        case 1:
-//          currentI->swapOperands();
-//          break;
-//        case 2: // randomly change the predicate
-//          switch (cryptoutils->get_uint32_t() % 10) {
-//          case 0:
-//            currentI->setPredicate(FCmpInst::FCMP_OEQ);
-//            break; // ordered and equal
-//          case 1:
-//            currentI->setPredicate(FCmpInst::FCMP_ONE);
-//            break; // ordered and operands are unequal
-//          case 2:
-//            currentI->setPredicate(FCmpInst::FCMP_UGT);
-//            break; // unordered or greater than
-//          case 3:
-//            currentI->setPredicate(FCmpInst::FCMP_UGE);
-//            break; // unordered, or greater than, or equal
-//          case 4:
-//            currentI->setPredicate(FCmpInst::FCMP_ULT);
-//            break; // unordered or less than
-//          case 5:
-//            currentI->setPredicate(FCmpInst::FCMP_ULE);
-//            break; // unordered, or less than, or equal
-//          case 6:
-//            currentI->setPredicate(FCmpInst::FCMP_OGT);
-//            break; // ordered and greater than
-//          case 7:
-//            currentI->setPredicate(FCmpInst::FCMP_OGE);
-//            break; // ordered and greater than or equal
-//          case 8:
-//            currentI->setPredicate(FCmpInst::FCMP_OLT);
-//            break; // ordered and less than
-//          case 9:
-//            currentI->setPredicate(FCmpInst::FCMP_OLE);
-//            break; // ordered or less than, or equal
-//          }
-//          break;
-//        }
-//      }
-//    }
-//  }
-//  return alteredBB;
-//}
-//
-//void VMFlat::get_a_b_c(int &a, int &b, int &c) {
-//  b = static_cast<uint16_t>(cryptoutils->get_uint32_t()&0xFFFF);
-//  const long bb = b * b;
-//  long ac4;
-//  do {
-//    a = static_cast<uint16_t>(cryptoutils->get_uint32_t()&0xFFFF);
-//    c = static_cast<uint16_t>(cryptoutils->get_uint32_t()&0xFFFF);
-//    ac4 = 4 * a * c;
-//  } while (bb >= ac4);
-//}
-
 bool VMFlat::runVmFlaOnFunction(Function &function) {
 
   if (!((VmObfuProbRate > 0) && (VmObfuProbRate <= 100))) {
@@ -1233,20 +647,16 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
     {
       insertMemoryAttackTaint(function);
       insertSymbolicMemorySnippet(function);
-      //fixStack(function,false);
     }
     if(RunVmFlatObfuscationPassEnc)
     {
       ConstEncryption str;
       str.runOnFunction(function,false);
-      //IndirectGlobalVars
       IndirectGlobalVariable gv;
       gv.runOnFunction(function);
     }
-   
     turnOffOptimization(&function);
   }
-  // DoSplit(&function,4);
   return true;
 }
 } // namespace

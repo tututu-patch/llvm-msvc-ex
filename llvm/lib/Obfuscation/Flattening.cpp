@@ -30,7 +30,8 @@ using namespace std;
 
 STATISTIC(Flattened, "Functions flattened");
 
-namespace {
+namespace ollvm
+{
 cl::opt<bool> Flattening("fla", cl::init(false),
                          cl::desc("Enable the flattening pass"));
 
@@ -224,13 +225,13 @@ bool flatten(Function &F) {
 
 PreservedAnalyses FlatteningPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  if (toObfuscate(Flattening, &F, "fla")) {
+  if (toObfuscate(ollvm::Flattening, &F, "fla")) {
 
     // Lower switch
     LowerSwitchPass lower;
     lower.run(F, AM);
 
-    if (flatten(F)) {
+    if (ollvm::flatten(F)) {
       ++Flattened;
     }
     return PreservedAnalyses::none();

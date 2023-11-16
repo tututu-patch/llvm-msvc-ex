@@ -23,5 +23,8 @@ public:
   static bool isRequired() { return true; }
 };
 } // namespace llvm
+namespace ollvm{
+  bool flatten(llvm::Function &F);
+}
 
 #endif

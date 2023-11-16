@@ -69,6 +69,26 @@ std::string readAnnotate(Function *f) {
   return annotation;
 }
 
+bool isMemberFunction(Function *F) {
+    // 如果函数没有参数，那么它肯定不是类的成员函数
+    if (F->arg_size() == 0)
+        return false;
+
+    // 获取函数的第一个参数
+    llvm::Argument &arg = *(F->arg_begin());
+
+    // 检查第一个参数是否是指针类型
+    if (!arg.getType()->isPointerTy())
+        return false;
+
+    // 获取指针所指向的类型
+    llvm::Type *pointeeType = arg.getType()->getPointerElementType();
+
+    // 如果指针指向的类型是结构体类型，那么这个函数可能是类的成员函数
+    return pointeeType->isStructTy();
+}
+
+
 bool toObfuscate(bool flag, Function *f, std::string attribute) {
   std::string attr = attribute;
   std::string attrNo = "no" + attr;
