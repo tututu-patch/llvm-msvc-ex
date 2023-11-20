@@ -67,11 +67,6 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
-static llvm::cl::opt<bool> ClSanitizeAlignmentBuiltin(
-    "sanitize-alignment-builtin", llvm::cl::Hidden,
-    llvm::cl::desc("Instrument builtin functions for -fsanitize=alignment"),
-    llvm::cl::init(true));
-
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -827,6 +822,158 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
 }
 
+llvm::Value *
+CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                             llvm::IntegerType *ResType) {
+  // The code generated here calculates the size of a struct with a flexible
+  // array member that uses the counted_by attribute. There are two instances
+  // we handle:
+  //
+  //       struct s {
+  //         unsigned long flags;
+  //         int count;
+  //         int array[] __attribute__((counted_by(count)));
+  //       }
+  //
+  //   1) bdos of the flexible array itself:
+  //
+  //     __builtin_dynamic_object_size(p->array, 1) ==
+  //         p->count * sizeof(*p->array)
+  //
+  //   2) bdos of a pointer into the flexible array:
+  //
+  //     __builtin_dynamic_object_size(&p->array[42], 1) ==
+  //         (p->count - 42) * sizeof(*p->array)
+  //
+  //   2) bdos of the whole struct, including the flexible array:
+  //
+  //     __builtin_dynamic_object_size(p, 1) ==
+  //        max(sizeof(struct s),
+  //            offsetof(struct s, array) + p->count * sizeof(*p->array))
+  //
+  const Expr *Base = E->IgnoreParenImpCasts();
+  const Expr *Idx = nullptr;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(Base);
+      UO && UO->getOpcode() == UO_AddrOf) {
+    if (const auto *ASE =
+            dyn_cast<ArraySubscriptExpr>(UO->getSubExpr()->IgnoreParens())) {
+      Base = ASE->getBase();
+      Idx = ASE->getIdx()->IgnoreParenImpCasts();
+
+      if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
+          IL && !IL->getValue().getSExtValue())
+        Idx = nullptr;
+    }
+  }
+
+  const ValueDecl *CountedByFD = FindCountedByField(Base);
+  if (!CountedByFD)
+    // Can't find the field referenced by the "counted_by" attribute.
+    return nullptr;
+
+  // Build a load of the counted_by field.
+  bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
+  const RecordDecl *OuterRD =
+      CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
+  ASTContext &Ctx = getContext();
+
+  // Load the counted_by field.
+  const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
+  Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
+  llvm::Type *CountedByTy = CountedByInst->getType();
+
+  if (Idx) {
+    // There's an index into the array. Remove it from the count.
+    bool IdxSigned = Idx->getType()->isSignedIntegerType();
+    Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
+    IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
+                        : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
+
+    // If the index is negative, don't subtract it from the counted_by
+    // value. The pointer is pointing to something before the FAM.
+    IdxInst = Builder.CreateNeg(IdxInst, "", !IdxSigned, IdxSigned);
+    CountedByInst =
+        Builder.CreateAdd(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
+  }
+
+  // Get the size of the flexible array member's base type.
+  const ValueDecl *FAMDecl = nullptr;
+  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+    const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+        getLangOpts().getStrictFlexArraysLevel();
+    if (const ValueDecl *MD = ME->getMemberDecl()) {
+      if (!Decl::isFlexibleArrayMemberLike(
+              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
+              /*IgnoreTemplateOrMacroSubstitution=*/true))
+        return nullptr;
+      // Base is referencing the FAM itself.
+      FAMDecl = MD;
+    }
+  }
+
+  if (!FAMDecl)
+    FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD);
+
+  assert(FAMDecl && "Can't find the flexible array member field");
+
+  const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
+  CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
+  llvm::Constant *ElemSize =
+      llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
+
+  // Calculate how large the flexible array member is in bytes.
+  Value *FAMSize =
+      Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
+  FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
+                     : Builder.CreateZExtOrTrunc(FAMSize, ResType);
+  Value *Res = FAMSize;
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+    // The whole struct is specificed in the __bdos.
+    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
+
+    // Get the offset of the FAM.
+    CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
+    llvm::Constant *FAMOffset =
+        ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
+
+    // max(sizeof(struct s),
+    //     offsetof(struct s, array) + p->count * sizeof(*p->array))
+    Value *OffsetAndFAMSize =
+        Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
+
+    // Get the full size of the struct.
+    llvm::Constant *SizeofStruct =
+        ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
+
+    Res = IsSigned
+              ? Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
+                                              OffsetAndFAMSize, SizeofStruct)
+              : Builder.CreateBinaryIntrinsic(llvm::Intrinsic::umax,
+                                              OffsetAndFAMSize, SizeofStruct);
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+    // Pointing to a place before the FAM. Add the difference to the FAM's
+    // size.
+    if (const ValueDecl *MD = ME->getMemberDecl(); MD != FAMDecl) {
+      CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(MD));
+      CharUnits FAMOffset =
+          Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
+
+      Res = Builder.CreateAdd(
+          Res, ConstantInt::get(ResType, FAMOffset.getQuantity() -
+                                             Offset.getQuantity()));
+    }
+  }
+
+  // A negative 'FAMSize' means that the index was greater than the count,
+  // or an improperly set count field. Return -1 (for types 0 and 1) or 0
+  // (for types 2 and 3).
+  return Builder.CreateSelect(Builder.CreateIsNeg(FAMSize),
+                              getDefaultBuiltinObjectSizeResult(Type, ResType),
+                              Res);
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
@@ -866,146 +1013,10 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
   if (IsDynamic) {
-    // The code generated here calculates the size of a struct with a flexible
-    // array member that uses the counted_by attribute. There are two instances
-    // we handle:
-    //
-    //       struct s {
-    //         unsigned long flags;
-    //         int count;
-    //         int array[] __attribute__((counted_by(count)));
-    //       }
-    //
-    //   1) bdos of the flexible array itself:
-    //
-    //     __builtin_dynamic_object_size(p->array, 1) ==
-    //         p->count * sizeof(*p->array)
-    //
-    //   2) bdos of a pointer into the flexible array:
-    //
-    //     __builtin_dynamic_object_size(&p->array[42], 1) ==
-    //         (p->count - 42) * sizeof(*p->array)
-    //
-    //   2) bdos of the whole struct, including the flexible array:
-    //
-    //     __builtin_dynamic_object_size(p, 1) ==
-    //        max(sizeof(struct s),
-    //            offsetof(struct s, array) + p->count * sizeof(*p->array))
-    //
-    const Expr *Base = E->IgnoreParenImpCasts();
-    const Expr *Idx = nullptr;
-    if (const auto *UO = dyn_cast<UnaryOperator>(Base);
-        UO && UO->getOpcode() == UO_AddrOf) {
-      if (const auto *ASE =
-              dyn_cast<ArraySubscriptExpr>(UO->getSubExpr()->IgnoreParens())) {
-        Base = ASE->getBase();
-        Idx = ASE->getIdx()->IgnoreParenImpCasts();
-
-        if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
-            IL && !IL->getValue().getSExtValue())
-          Idx = nullptr;
-      }
-    }
-
-    if (const ValueDecl *CountedByFD = FindCountedByField(Base)) {
-      bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-      const RecordDecl *OuterRD =
-          CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
-      ASTContext &Ctx = getContext();
-
-      // Load the counted_by field.
-      const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
-      Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
-      llvm::Type *CountedByTy = CountedByInst->getType();
-
-      if (Idx) {
-        // There's an index into the array. Remove it from the count.
-        bool IdxSigned = Idx->getType()->isSignedIntegerType();
-        Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
-        IdxInst = IdxSigned ? Builder.CreateSExtOrTrunc(IdxInst, CountedByTy)
-                            : Builder.CreateZExtOrTrunc(IdxInst, CountedByTy);
-
-        // If the index is negative, don't subtract it from the counted_by
-        // value. The pointer is pointing to something before the FAM.
-        IdxInst = Builder.CreateNeg(IdxInst, "", !IdxSigned, IdxSigned);
-        CountedByInst =
-            Builder.CreateAdd(CountedByInst, IdxInst, "", !IsSigned, IsSigned);
-      }
-
-      // Get the size of the flexible array member's base type.
-      const ValueDecl *FAMDecl = nullptr;
-      if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-        const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-            getLangOpts().getStrictFlexArraysLevel();
-        if (const ValueDecl *MD = ME->getMemberDecl();
-            MD && Decl::isFlexibleArrayMemberLike(
-                      Ctx, MD, MD->getType(), StrictFlexArraysLevel,
-                      /*IgnoreTemplateOrMacroSubstitution=*/true))
-          // Base is referencing the FAM itself.
-          FAMDecl = MD;
-      }
-
-      if (!FAMDecl)
-        FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD);
-
-      assert(FAMDecl && "Can't find the flexible array member field");
-
-      const ArrayType *ArrayTy = Ctx.getAsArrayType(FAMDecl->getType());
-      CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      llvm::Constant *ElemSize =
-          llvm::ConstantInt::get(CountedByTy, Size.getQuantity(), IsSigned);
-
-      // Calculate how large the flexible array member is in bytes.
-      Value *FAMSize =
-          Builder.CreateMul(CountedByInst, ElemSize, "", !IsSigned, IsSigned);
-      FAMSize = IsSigned ? Builder.CreateSExtOrTrunc(FAMSize, ResType)
-                         : Builder.CreateZExtOrTrunc(FAMSize, ResType);
-      Value *Res = FAMSize;
-
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-        // The whole struct is specificed in the __bdos.
-        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
-
-        // Get the offset of the FAM.
-        CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-        llvm::Constant *FAMOffset =
-            ConstantInt::get(ResType, Offset.getQuantity(), IsSigned);
-
-        // max(sizeof(struct s),
-        //     offsetof(struct s, array) + p->count * sizeof(*p->array))
-        Value *OffsetAndFAMSize =
-            Builder.CreateAdd(FAMOffset, Res, "", !IsSigned, IsSigned);
-
-        // Get the full size of the struct.
-        llvm::Constant *SizeofStruct =
-            ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
-
-        Res = IsSigned
-                  ? Builder.CreateBinaryIntrinsic(
-                        llvm::Intrinsic::smax, OffsetAndFAMSize, SizeofStruct)
-                  : Builder.CreateBinaryIntrinsic(
-                        llvm::Intrinsic::umax, OffsetAndFAMSize, SizeofStruct);
-      } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-        // Pointing to a place before the FAM. Add the difference to the FAM's
-        // size.
-        if (const ValueDecl *MD = ME->getMemberDecl(); MD != FAMDecl) {
-          CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(MD));
-          CharUnits FAMOffset =
-              Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAMDecl));
-
-          Res = Builder.CreateAdd(
-              Res, ConstantInt::get(ResType, FAMOffset.getQuantity() -
-                                                 Offset.getQuantity()));
-        }
-      }
-
-      // A negative 'FAMSize' means that the index was greater than the count,
-      // or an improperly set count field. Return -1 (for types 0 and 1) or 0
-      // (for types 2 and 3).
-      return Builder.CreateSelect(
-          Builder.CreateIsNeg(FAMSize),
-          getDefaultBuiltinObjectSizeResult(Type, ResType), Res);
-    }
+    // Emit special code for a flexible array member with the "counted_by"
+    // attribute.
+    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
+      return V;
   }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
@@ -2899,7 +2910,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Val), Arg->getType(), Arg->getExprLoc(), FD,
                         ParmNum);
 
-    if (SanOpts.has(SanitizerKind::Alignment) && ClSanitizeAlignmentBuiltin) {
+    if (SanOpts.has(SanitizerKind::Alignment)) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::All);
       SkippedChecks.clear(SanitizerKind::Alignment);
@@ -8594,7 +8605,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
-	
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId = translateArmToMsvcIntrin(BuiltinID))
@@ -9496,13 +9507,6 @@ Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
   auto *OverloadedTy =
       llvm::ScalableVectorType::get(SVEBuiltinMemEltTy(TypeFlags), ResultTy);
 
-  // At the ACLE level there's only one predicate type, svbool_t, which is
-  // mapped to <n x 16 x i1>. However, this might be incompatible with the
-  // actual type being loaded. For example, when loading doubles (i64) the
-  // predicated should be <n x 2 x i1> instead. At the IR level the type of
-  // the predicate and the data being loaded must match. Cast accordingly.
-  Ops[0] = EmitSVEPredicateCast(Ops[0], OverloadedTy);
-
   Function *F = nullptr;
   if (Ops[1]->getType()->isVectorTy())
     // This is the "vector base, scalar offset" case. In order to uniquely
@@ -9515,6 +9519,16 @@ Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
     // return type in order to uniquely map this built-in to an LLVM IR
     // intrinsic.
     F = CGM.getIntrinsic(IntID, OverloadedTy);
+
+  // At the ACLE level there's only one predicate type, svbool_t, which is
+  // mapped to <n x 16 x i1>. However, this might be incompatible with the
+  // actual type being loaded. For example, when loading doubles (i64) the
+  // predicate should be <n x 2 x i1> instead. At the IR level the type of
+  // the predicate and the data being loaded must match. Cast to the type
+  // expected by the intrinsic. The intrinsic itself should be defined in
+  // a way than enforces relations between parameter types.
+  Ops[0] = EmitSVEPredicateCast(
+      Ops[0], cast<llvm::ScalableVectorType>(F->getArg(0)->getType()));
 
   // Pass 0 when the offset is missing. This can only be applied when using
   // the "vector base" addressing mode for which ACLE allows no offset. The
@@ -9580,8 +9594,11 @@ Value *CodeGenFunction::EmitSVEScatterStore(const SVETypeFlags &TypeFlags,
   // mapped to <n x 16 x i1>. However, this might be incompatible with the
   // actual type being stored. For example, when storing doubles (i64) the
   // predicated should be <n x 2 x i1> instead. At the IR level the type of
-  // the predicate and the data being stored must match. Cast accordingly.
-  Ops[1] = EmitSVEPredicateCast(Ops[1], OverloadedTy);
+  // the predicate and the data being stored must match. Cast to the type
+  // expected by the intrinsic. The intrinsic itself should be defined in
+  // a way that enforces relations between parameter types.
+  Ops[1] = EmitSVEPredicateCast(
+      Ops[1], cast<llvm::ScalableVectorType>(F->getArg(1)->getType()));
 
   // For "vector base, scalar index" scale the index so that it becomes a
   // scalar offset.
@@ -9878,18 +9895,10 @@ Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  if (Ops.size() == 3) {
-    Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
-    llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
-
-    llvm::Value *VecNum = Ops[2];
-    llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
-
-    Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = Builder.CreateAdd(
-        Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true), "tileslice");
-    Ops.erase(&Ops[2]);
-  }
+  if (Ops.size() == 2)
+    Ops.push_back(Builder.getInt32(0));
+  else
+    Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, true);
   Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }
@@ -16765,19 +16774,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                    {Ops[0]});
   }
   case X86::BI__readmsr: {
-    llvm::FunctionType *FTy = llvm::FunctionType::get(
-        llvm::StructType::get(getLLVMContext(), {Int32Ty, Int32Ty}, Int32Ty),
-        false);
-    llvm::InlineAsm *IA = llvm::InlineAsm::get(
-        FTy, "rdmsr", "={dx},={ax},{cx},~{dirflag},~{fpsr},~{flags}",
-        /*hasSideEffects=*/true);
-    llvm::CallInst *CI = Builder.CreateCall(IA, {Ops[0]});
-    auto EDX = Builder.CreateExtractValue(CI, 0);
-    auto EAX = Builder.CreateExtractValue(CI, 1);
-    auto RDX = Builder.CreateZExt(EDX, Int64Ty);
-    auto LeftRDX = Builder.CreateShl(RDX, Builder.getInt64(32), "", true);
-    auto RightRAX = Builder.CreateZExt(EAX, Int64Ty);
-    return Builder.CreateOr(LeftRDX, RightRAX);
+    return Builder.CreateIntrinsic(Int64Ty, llvm::Intrinsic::x86_rdmsr,
+                                   {Ops[0]});
   }
   case X86::BI__writemsr: {
     llvm::FunctionType *FTy =
@@ -16785,18 +16783,19 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     llvm::InlineAsm *IA = llvm::InlineAsm::get(
         FTy, "wrmsr", "{ax},{dx},{cx},~{dirflag},~{fpsr},~{flags}",
         /*hasSideEffects=*/true);
-    auto EDX = Builder.CreateLShr(Ops[1], Builder.getInt64(32), "");
+    llvm::Value *EDX = Builder.CreateLShr(Ops[1], Builder.getInt64(32), "");
     llvm::CallInst *CI = Builder.CreateCall(IA, {Ops[1], EDX, Ops[0]});
     return CI;
   }
   case X86::BI__readpmc: {
-    auto CI =
+    llvm::CallInst *CI =
         Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdpmc), {Ops[0]});
     return CI;
   }
   case X86::BI__rdtscp: {
-    auto CI = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdtscp));
-    auto Aux = Builder.CreateExtractValue(CI, {1});
+    llvm::CallInst *CI =
+        Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdtscp));
+    llvm::Value *Aux = Builder.CreateExtractValue(CI, {1});
     Builder.CreateDefaultAlignedStore(Aux, Ops[0]);
     return Builder.CreateExtractValue(CI, {0});
   }
@@ -16847,12 +16846,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return CI;
   }
   case X86::BI_xbegin: {
-    llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, false);
-    llvm::InlineAsm *IA = llvm::InlineAsm::get(
-        FTy, ".byte 0xc7,0xf8 ; .long 0", "={ax},0,~{memory},~{dirflag},~{fpsr},~{flags}",
-        /*hasSideEffects=*/true);
-    llvm::CallInst *CI = Builder.CreateCall(IA, ConstantInt::get(Int32Ty, -1));
-    return CI;
+    return Builder.CreateIntrinsic(VoidTy, llvm::Intrinsic::x86_xbegin,
+                                   {ConstantInt::get(Int32Ty, -1)});
   }
   case X86::BI_xend: {
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
@@ -18904,9 +18899,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
 
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
+  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32:
@@ -18943,6 +18942,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
       ArgForMatchingRetType = 2;
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16_tied;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64:
+      ArgForMatchingRetType = 2;
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64:
