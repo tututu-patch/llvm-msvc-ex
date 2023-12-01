@@ -49,6 +49,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     RunVmFlatObfuscationPassSym("vm-fla-sym", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass Anti Sym and Taint"));
+
+static cl::opt<bool>
+    RunVmFlatObfuscationPassLight("vm-fla-light", cl::init(false),
+                             cl::desc("OLLVM - VmFlattenObfuscationPass Light"));
 static cl::opt<int> VmObfuProbRate(
     "vm-prob", cl::init(100),
     cl::desc("Choose the probability <vm-prob> for each basic blocks will "
@@ -231,9 +235,11 @@ bool VMFlat::DoFlatten(Function *f) {
   }
 
   if(isMemberFunction(f)||
-      f->hasCXXEH() || f->hasCXXSEH())
+      f->hasCXXEH() || f->hasCXXSEH() )
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
+    if(RunVmFlatObfuscationPassLight)
+      return false;
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
@@ -246,7 +252,9 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    //ÖØÐÂ½øÀ´
+    if(RunVmFlatObfuscationPassLight){
+      return false;
+    }
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return DoFlatten(f);
@@ -340,7 +348,7 @@ bool VMFlat::DoFlatten(Function *f) {
   auto oparr_var = new GlobalVariable(*(f->getParent()), at, false,
                                       GlobalValue::LinkageTypes::PrivateLinkage,
                                       opcode_array, new_name_pre + "opcodes");
-  // È¥³ýµÚÒ»¸ö»ù±¾¿éÄ©Î²µÄÌø×ª
+  // È¥ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä©Î²ï¿½ï¿½ï¿½ï¿½×ª
   old_entry->getTerminator()->eraseFromParent();
   auto vm_pc =
       new AllocaInst(type_int64_ty, 0, Twine(new_name_pre + "VMpc"), old_entry);
