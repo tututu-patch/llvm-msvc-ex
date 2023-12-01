@@ -252,7 +252,8 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    if(RunVmFlatObfuscationPassLight){
+    if(RunVmFlatObfuscationPassLight)
+    {
       return false;
     }
     ollvm::bogus(*f);

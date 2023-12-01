@@ -23,6 +23,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [ ] MBA-subs的bug
 - [ ] 移植xVMP
 - [x] 在vm-fla-enc中使用间接全局变量访问
+- [x] vm-fla-light时不处理单一和复杂的CXX问题
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -71,13 +72,13 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 
 ### 混淆例子
 Add To VS Project Compiler Cmdline
-#### 最大保护（文件将超过10MB）
+#### 最大保护（文件将超过100MB）
 ```
 -mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-enc -mllvm -vm-fla-sym
 ```
-#### 单纯使用特色部分（轻量模式）
+#### 单纯使用特色部分（轻量模式 不加Light会导致文件飞升到10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-enc -mllvm -vm-fla-sym
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-enc -mllvm -vm-fla-sym -mllvm -vm-fla-light
 ```
 #### 需要修改载研究的部分
 ```
