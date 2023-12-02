@@ -248,8 +248,10 @@ bool VMFlat::DoFlatten(Function *f) {
   }
 
   if(f->getName().startswith("??") || f->getName().contains("std@")) {
-    if(VmObfuscationLevel<6)
+    if(VmObfuscationLevel<5)
       return false;
+    if(VmObfuscationLevel<6)
+      return ollvm::flatten(*f);
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
@@ -259,17 +261,16 @@ bool VMFlat::DoFlatten(Function *f) {
       f->hasCXXEH() || f->hasCXXSEH() )
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
-    if(VmObfuscationLevel>=0 && VmObfuscationLevel<=4)
+    if(VmObfuscationLevel<=4)
       return false;
-    if(VmObfuscationLevel==5)
+    if(VmObfuscationLevel<6)
       return ollvm::flatten(*f);
-    
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
   }
 
-  errs()<<f->getName()<<"\r\n";
+  //errs()<<f->getName()<<"\r\n";
 
   if(f->getName().startswith("genrand."))
   {
