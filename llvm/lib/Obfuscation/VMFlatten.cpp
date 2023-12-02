@@ -239,7 +239,7 @@ bool VMFlat::DoFlatten(Function *f) {
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
     if(RunVmFlatObfuscationPassLight)
-      return false;
+      return ollvm::flatten(*f);
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
