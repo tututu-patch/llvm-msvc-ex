@@ -248,7 +248,11 @@ bool VMFlat::DoFlatten(Function *f) {
   }
 
   if(f->getName().startswith("??") || f->getName().contains("std@")) {
-    return false;
+    if(VmObfuscationLevel<7)
+      return false;
+    ollvm::bogus(*f);
+    ollvm::doF(*f->getParent(),*f);
+    return ollvm::flatten(*f);
   }
 
   if(isMemberFunction(f)||
@@ -265,6 +269,15 @@ bool VMFlat::DoFlatten(Function *f) {
     return ollvm::flatten(*f);
   }
 
+  if(f->getName().startswith("genrand_"))
+  {
+    if(VmObfuscationLevel==7){
+      ollvm::bogus(*f);
+      ollvm::doF(*f->getParent(),*f);
+      return DoFlatten(f);
+    }
+  }
+
   RUN_BLOCK = cryptoutils->get_uint32_t();
   JMP_BORING = RUN_BLOCK + 1;
   JMP_SELECT = RUN_BLOCK + 2;
@@ -277,7 +290,7 @@ bool VMFlat::DoFlatten(Function *f) {
     
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
-    return DoFlatten(f);
+    return ollvm::flatten(*f);
   }
 
 
