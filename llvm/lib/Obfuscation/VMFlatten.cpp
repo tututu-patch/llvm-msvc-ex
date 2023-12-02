@@ -269,13 +269,12 @@ bool VMFlat::DoFlatten(Function *f) {
     return ollvm::flatten(*f);
   }
 
-  if(f->getName().startswith("genrand_"))
+  errs()<<f->getName()<<"\r\n";
+
+  if(f->getName().startswith("genrand."))
   {
-    if(VmObfuscationLevel==7){
-      ollvm::bogus(*f);
-      ollvm::doF(*f->getParent(),*f);
-      return DoFlatten(f);
-    }
+    if(VmObfuscationLevel==7)
+      return true;
   }
 
   RUN_BLOCK = cryptoutils->get_uint32_t();
@@ -285,6 +284,11 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
+    if(VmObfuscationLevel==7){
+      ollvm::bogus(*f);
+      ollvm::doF(*f->getParent(),*f);
+      return DoFlatten(f);
+    }
     return false;
   }
 
