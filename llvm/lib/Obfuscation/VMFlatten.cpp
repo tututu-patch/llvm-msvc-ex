@@ -42,6 +42,8 @@ using namespace llvm;
 static cl::opt<bool>
     RunVmFlatObfuscationPass("vm-fla", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass"));
+
+/*
 static cl::opt<bool>
     RunVmFlatObfuscationPassEnc("vm-fla-enc", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPassEnc"));
@@ -53,10 +55,25 @@ static cl::opt<bool>
 static cl::opt<bool>
     RunVmFlatObfuscationPassLight("vm-fla-light", cl::init(false),
                              cl::desc("OLLVM - VmFlattenObfuscationPass Light"));
+*/
+
 static cl::opt<int> VmObfuProbRate(
     "vm-prob", cl::init(100),
     cl::desc("Choose the probability <vm-prob> for each basic blocks will "
              "be obfuscated by VmFlattenObfuscationPass"));
+
+static cl::opt<int> VmObfuscationLevel(
+    "vm-fla-level", cl::init(7),
+    cl::desc("OLLVM - VmFlattenObfuscationPass Level"));
+
+//0 Only-vm-fla
+//1 vm-fla with enc const
+//2 vm-fla with enc const with global ind
+//3 vm-fla with enc const with global ind with antitaint
+//4 vm-fla with enc const with global ind with antitaint and sym
+//5 vm-fla with enc const with global ind with antitaint and sym with fla for some
+//6 vm-fla with enc const with global ind with antitaint and sym with fla for some with bcf
+//7 vm-fla with enc const with global ind with antitaint and sym with fla for some with bcf for all 
 
 namespace {
 struct VMFlat {
@@ -238,8 +255,11 @@ bool VMFlat::DoFlatten(Function *f) {
       f->hasCXXEH() || f->hasCXXSEH() )
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
-    if(RunVmFlatObfuscationPassLight)
+    if(VmObfuscationLevel>=0 && VmObfuscationLevel<=4)
+      return false;
+    if(VmObfuscationLevel==5)
       return ollvm::flatten(*f);
+    
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return ollvm::flatten(*f);
@@ -252,10 +272,9 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    if(RunVmFlatObfuscationPassLight)
-    {
+    if(VmObfuscationLevel>=0 && VmObfuscationLevel<=6)
       return false;
-    }
+    
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
     return DoFlatten(f);
@@ -667,16 +686,22 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   }
   if (changed)
   {
-    if(RunVmFlatObfuscationPassSym)
+    if(VmObfuscationLevel>=3)
     {
       insertMemoryAttackTaint(function);
-      insertSymbolicMemorySnippet(function);
     }
-    if(RunVmFlatObfuscationPassEnc)
+    if(VmObfuscationLevel>=4)
+    {
+       insertSymbolicMemorySnippet(function);
+    }
+    if(VmObfuscationLevel>=1)
     {
       ConstEncryption str;
       str.runOnFunction(function,false);
-      IndirectGlobalVariable gv;
+    }
+    if(VmObfuscationLevel>=2)
+    {
+       IndirectGlobalVariable gv;
       gv.runOnFunction(function);
     }
     turnOffOptimization(&function);
