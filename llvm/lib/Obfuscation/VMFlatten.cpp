@@ -248,7 +248,7 @@ bool VMFlat::DoFlatten(Function *f) {
   }
 
   if(f->getName().startswith("??") || f->getName().contains("std@")) {
-    if(VmObfuscationLevel<7)
+    if(VmObfuscationLevel<6)
       return false;
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
@@ -285,12 +285,7 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    if(VmObfuscationLevel>=0 && VmObfuscationLevel<=6)
-      return false;
-    
-    ollvm::bogus(*f);
-    ollvm::doF(*f->getParent(),*f);
-    return ollvm::flatten(*f);
+    return false;
   }
 
 
