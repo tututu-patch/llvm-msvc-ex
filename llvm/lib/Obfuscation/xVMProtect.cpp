@@ -93,7 +93,7 @@ struct xvmm {
                       std::vector<Constant *> &opcodes);
   int allocaMemory(BasicBlock &bb, std::map<Instruction *, int> &alloca_map,
                    int mem_base);
-  int get_unique_uint8_t(std::vector<uint8_t> & op_u);
+  //int get_unique_uint8_t(std::vector<uint8_t> & op_u);
   bool run_on_function(Function &f);
 };
 
