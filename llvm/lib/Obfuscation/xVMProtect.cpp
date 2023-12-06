@@ -35,9 +35,9 @@
 
 using namespace llvm;
 
-//#define RAW_INST 0
-//#define PUSH_ADDR 1
-//#define STORE_IMM 2
+#define RAW_INST 0
+#define PUSH_ADDR 1
+#define STORE_IMM 2
 
 static cl::opt<bool> RunXvm("x-vm", cl::init(false), cl::desc("OLLVM - xvm"));
 
@@ -57,9 +57,9 @@ struct xvm_op_info {
   }
 };
 struct xvmm {
-  int op_raw_inst;
-  int op_push_addr;
-  int op_store_imm;
+  //int op_raw_inst;
+  //int op_push_addr;
+  //int STORE_IMM;
   std::vector<Function *> vm_funcs;
   std::map<Function *, Function *> vm_mapping;
   void demote_registers(Function *f);
@@ -207,7 +207,7 @@ xvm_op_info * xvmm::getOrCreateRawOp(Instruction &instr,
             if(info->instr->getOpcode()==Instruction::Br)
                 return info;
         }
-        const auto news=new xvm_op_info(op_raw_inst);
+        const auto news=new xvm_op_info(RAW_INST);
         news->opcode=cur_op++;
         news->instr=&instr;
         ops.push_back(news);
@@ -243,7 +243,7 @@ xvm_op_info * xvmm::getOrCreateRawOp(Instruction &instr,
                 }
             }
         }
-        const auto news=new xvm_op_info(op_raw_inst);
+        const auto news=new xvm_op_info(RAW_INST);
         news->opcode=cur_op++;
         news->instr=&instr;
         for (auto i : operand1) {
@@ -295,24 +295,24 @@ void xvmm::FixCallInst(Function *target, Function *orig) {
 }
 
 void xvmm::createBuiltinOps(std::vector<xvm_op_info *> &ops, int &cur_op) {
-    const auto push_addr=new xvm_op_info(op_raw_inst);
+    const auto push_addr=new xvm_op_info(RAW_INST);
     push_addr->opcode=cur_op++;
-    push_addr->builtin_type=op_push_addr;
-    const auto store_1b=new xvm_op_info(op_raw_inst);
+    push_addr->builtin_type=PUSH_ADDR;
+    const auto store_1b=new xvm_op_info(RAW_INST);
     store_1b->opcode=cur_op++;
-    store_1b->builtin_type=op_store_imm;
+    store_1b->builtin_type=STORE_IMM;
     store_1b->store_size=1;
-    const auto store_2b=new xvm_op_info(op_raw_inst);
+    const auto store_2b=new xvm_op_info(RAW_INST);
     store_2b->opcode=cur_op++;
-    store_2b->builtin_type=op_store_imm;
+    store_2b->builtin_type=STORE_IMM;
     store_2b->store_size=2;
-    const auto store_4b=new xvm_op_info(op_raw_inst);
+    const auto store_4b=new xvm_op_info(RAW_INST);
     store_4b->opcode=cur_op++;
-    store_4b->builtin_type=op_store_imm;
+    store_4b->builtin_type=STORE_IMM;
     store_4b->store_size=4;
-    const auto store_8b=new xvm_op_info(op_raw_inst);
+    const auto store_8b=new xvm_op_info(RAW_INST);
     store_8b->opcode=cur_op++;
-    store_8b->builtin_type=op_store_imm;
+    store_8b->builtin_type=STORE_IMM;
     store_8b->store_size=8;
     ops.push_back(push_addr);
     ops.push_back(store_1b);
@@ -380,7 +380,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
     {
         if(op->builtin_type)
         {
-            if(op->builtin_type==op_push_addr)
+            if(op->builtin_type==PUSH_ADDR)
             {
                 BasicBlock *handler=BasicBlock::Create(vm.getContext(),"push_addr",&vm);
                 dispatcher->addCase(irb.getInt8(op->opcode),handler);
@@ -394,7 +394,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
                 BranchInst::Create(loop_end,handler);
                 handler->moveBefore(loop_end);
             }
-            else if(op->builtin_type==op_store_imm)
+            else if(op->builtin_type==STORE_IMM)
             {
                 
                 if(op->store_size==1)
@@ -555,7 +555,7 @@ unsigned char xvmm::findStoreImmOp(std::vector<xvm_op_info *> &ops,
     int store_size) {
   for(xvm_op_info *op:ops)
   {
-    if(op->builtin_type==op_store_imm && op->store_size==store_size)
+    if(op->builtin_type==STORE_IMM && op->store_size==store_size)
       return op->opcode;
   }
   assert(false);
@@ -564,7 +564,7 @@ unsigned char xvmm::findStoreImmOp(std::vector<xvm_op_info *> &ops,
 unsigned char xvmm::findPushAddrOp(std::vector<xvm_op_info *> &ops) {
   for(xvm_op_info *op:ops)
   {
-    if(op->builtin_type==op_push_addr)
+    if(op->builtin_type==PUSH_ADDR)
       return op->opcode;
   }
   assert(false);
@@ -995,24 +995,24 @@ int xvmm::allocaMemory(BasicBlock &bb, std::map<Instruction *, int> &alloca_map,
     return max_space+mem_base;
 }
 
-int xvmm::get_unique_uint8_t(std::vector<uint8_t> &op_u) {
-  while(true) {
-    const auto op = cryptoutils->get_uint8_t();
-    if(std::find(std::begin(op_u),std::end(op_u),op)==std::end(op_u)) {
-      op_u.push_back(op);
-      return op;
-    }
-  }
-  return cryptoutils->get_uint8_t();
-}
+//int xvmm::get_unique_uint8_t(std::vector<uint8_t> &op_u) {
+//  while(true) {
+//    const auto op = cryptoutils->get_uint8_t();
+//    if(std::find(std::begin(op_u),std::end(op_u),op)==std::end(op_u)) {
+//      op_u.push_back(op);
+//      return op;
+//    }
+//  }
+//  return cryptoutils->get_uint8_t();
+//}
 
 bool xvmm::run_on_function(Function &f) {
   bool is_vm = false;
-  std::vector<uint8_t> op_uid;
-  
-  op_raw_inst = get_unique_uint8_t(op_uid);
-  op_push_addr = get_unique_uint8_t(op_uid);
-  op_store_imm = get_unique_uint8_t(op_uid);
+  //std::vector<uint8_t> op_uid;
+  //
+  //op_raw_inst = get_unique_uint8_t(op_uid);
+  //op_push_addr = get_unique_uint8_t(op_uid);
+  //STORE_IMM = get_unique_uint8_t(op_uid);
   for (const Function *ff : vm_funcs) {
     if (&f == ff) {
       is_vm = true;
