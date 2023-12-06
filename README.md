@@ -24,6 +24,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [ ] 移植xVMP
 - [x] 在vm-fla-enc中使用间接全局变量访问
 - [x] vm-fla-level 0~7 8个处理等级 7最强，0最弱，默认7
+- [x] 弱鸡vmp加入 
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
