@@ -284,6 +284,7 @@ bool VMFlat::DoFlatten(Function *f) {
       return true;
   }
 
+
   RUN_BLOCK = cryptoutils->get_uint32_t();
   JMP_BORING = RUN_BLOCK + 1;
   JMP_SELECT = RUN_BLOCK + 2;

@@ -1044,7 +1044,7 @@ PreservedAnalyses xvmPass::run(Module &M, ModuleAnalysisManager &AM) {
         const auto vm_ret = xvm.run_on_function(fn);
         vm|=vm_ret;
       }
-      if(get_vm_fla_level()>5&&fn.getName().startswith("genrand.")){
+      if(get_vm_fla_level()==7&&fn.getName().startswith("genrand.")){
         const auto vm_ret = xvm.run_on_function(fn);
         vm|=vm_ret;
       }
