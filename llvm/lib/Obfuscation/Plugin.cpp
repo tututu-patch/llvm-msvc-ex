@@ -32,9 +32,9 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
         });
         PB.registerOptimizerEarlyEPCallback([](llvm::ModulePassManager &MPM,
                                                OptimizationLevel Level) {
-          MPM.addPass(xvmPass());
           MPM.addPass(StringObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
+          MPM.addPass(xvmPass());
         });
 
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,

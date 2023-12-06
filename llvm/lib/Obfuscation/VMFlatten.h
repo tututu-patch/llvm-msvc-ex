@@ -50,7 +50,7 @@ public:
 
   static bool isRequired() { return true; }
 };
-
+  int get_vm_fla_level();
 } // namespace llvm
 
 #endif

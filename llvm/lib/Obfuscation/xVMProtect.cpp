@@ -5,6 +5,7 @@
 #include "Flattening.h"
 #include "IndirectGlobalVars.h"
 #include "Utils.h"
+#include "VMFlatten.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
@@ -103,34 +104,34 @@ BasicBlock *xvmm::handleAlloca(Function &f, std::map<Value *, int> &value_map,
                                std::vector<std::pair<int, int>> &remap,
                                int &space) {
   std::vector<AllocaInst *> allocas;
-  printf("    -collect allocainst\n");
+ //printf("    -collect allocainst\n");
   for (BasicBlock &bb : f)
     for (Instruction &i : bb) {
       if (isa<AllocaInst>(i))
         allocas.push_back((AllocaInst *)&i);
     }
   BasicBlock *alloca_block = &f.getEntryBlock();
-  printf("    -move allocainst before\n");
+ //printf("    -move allocainst before\n");
   for (AllocaInst *a : allocas)
     a->moveBefore(&*alloca_block->getFirstInsertionPt());
-  printf("    -split allocainst block\n");
+ //printf("    -split allocainst block\n");
   for (Instruction &i : *alloca_block) {
     if (!isa<AllocaInst>(i)) {
       alloca_block->splitBasicBlock(&i);
       break;
     }
   }
-  printf("    -calculate locals address\n");
+ //printf("    -calculate locals address\n");
   const DataLayout data = f.getParent()->getDataLayout();
   for (AllocaInst *a : allocas) {
     int real_addr = space;
-    printf("   [%4d] alloc size %d\n", real_addr,
-           static_cast<int>(data.getTypeAllocSize(a->getAllocatedType())));
+   //printf("   [%4d] alloc size %d\n", real_addr,
+    //       static_cast<int>(data.getTypeAllocSize(a->getAllocatedType())));
     space += data.getTypeAllocSize(a->getAllocatedType());
     int ptr_addr = space;
     value_map[a] = space;
-    printf("   [%4d] store ptr size %d\n", ptr_addr,
-           static_cast<int>(data.getTypeAllocSize(a->getType())));
+   //printf("   [%4d] store ptr size %d\n", ptr_addr,
+    //       static_cast<int>(data.getTypeAllocSize(a->getType())));
     space += data.getTypeAllocSize(a->getType());
     remap.emplace_back(ptr_addr, real_addr);
   }
@@ -139,16 +140,16 @@ BasicBlock *xvmm::handleAlloca(Function &f, std::map<Value *, int> &value_map,
 }
 
 Function *xvmm::virtualization(Function &f) {
-  printf("\nFunction Name: %s\n",f.getName().str().c_str());
+ //printf("\nFunction Name: %s\n",f.getName().str().c_str());
   if (!check(f))
     return nullptr;
 
-  printf("[1] start demote registers!\n");
+ //printf("[1] start demote registers!\n");
   demote_registers(&f);
   std::map<Value *, int> alloca_map;
   std::vector<std::pair<int, int>> remap;
   int mem_size = 0, cur_op = 1;
-  printf("[2] start alloca vm memory for arguments!\n");
+ //printf("[2] start alloca vm memory for arguments!\n");
   const DataLayout data = f.getParent()->getDataLayout();
   for (Function::arg_iterator iter = f.arg_begin(); iter != f.arg_end();
        iter++) {
@@ -156,12 +157,12 @@ Function *xvmm::virtualization(Function &f) {
     alloca_map[arg] = mem_size;
     mem_size += data.getTypeAllocSize(arg->getType());
   }
-  printf("    ----arguments space %d\n", mem_size);
-  printf("[3] start alloca vm memory for locals!\n");
+ //printf("    ----arguments space %d\n", mem_size);
+ //printf("[3] start alloca vm memory for locals!\n");
   const BasicBlock *locals_block = handleAlloca(f, alloca_map, remap, mem_size);
-  printf("    ----current allocated space %d\n", mem_size);
+ //printf("    ----current allocated space %d\n", mem_size);
   std::vector<BasicBlock *> code_blocks;
-  printf("[4] create mapping from instruction to opcode\n");
+ //printf("[4] create mapping from instruction to opcode\n");
   std::map<Instruction *, xvm_op_info *> instr_map;
   std::vector<xvm_op_info *> ops;
   for (BasicBlock &bb : f) {
@@ -174,12 +175,13 @@ Function *xvmm::virtualization(Function &f) {
     }
   }
   createBuiltinOps(ops, cur_op);
-  printf("   -current number of raw op handlers: %lld\n", ops.size());
+ //printf("   -current number of raw op handlers: %lld\n", ops.size());
+  /*
   for (const xvm_op_info *o : ops) {
     if (!o->builtin_type)
-      printf("    -- %s\n", o->instr->getOpcodeName());
-  }
-  printf("[5] building vistualization function\n");
+        printf("    -- %s\n", o->instr->getOpcodeName());
+  }*/
+ //printf("[5] building vistualization function\n");
   std::vector<Constant *> opcodes;
   const int new_mem_size = generateOpcodes(code_blocks, alloca_map, instr_map,
                                            ops, mem_size, opcodes);
@@ -273,7 +275,7 @@ bool xvmm::check(Function &f) {
     for (Instruction &i : bb) {
       if ((i.isTerminator() && !isa<BranchInst>(i) && !isa<ReturnInst>(i)) ||
           i.isFuncletPad()) {
-        printf("[!] Unsupported Instruction Type: %s\n",i.getOpcodeName());
+       //printf("[!] Unsupported Instruction Type: %s\n",i.getOpcodeName());
         return false;
       }
     }
@@ -341,7 +343,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
     auto ptr=irb.CreateAlloca(type_int32_ty);
     
     //initial for locals
-     errs()<<"initial for locals\n";
+    // errs()<<"initial for locals\n";
     for(std::pair<int,int> p:remap)
     {
         int ptr_addr=p.first,real_addr=p.second;
@@ -350,7 +352,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
         Value *to_store=irb.CreateGEP(memory->getAllocatedType(),memory,{irb.getInt32(0),irb.getInt32(ptr_addr)});
         irb.CreateStore(ptr,irb.CreateBitCast(to_store,ptr->getType()->getPointerTo()));
     }
-    errs()<<"initial for arguments\n";
+   // errs()<<"initial for arguments\n";
 
     
     //initial for arguments
@@ -365,7 +367,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
         irb.CreateStore(real_arg,irb.CreateBitCast(to_store,real_arg->getType()->getPointerTo()));
         real_iter++;
     }
-     errs()<<"initial for dispatches\n";
+    // errs()<<"initial for dispatches\n";
     irb.CreateStore(irb.getInt32(0),pc);
     irb.CreateStore(irb.getInt32(0),ptr);
     BranchInst::Create(dispatch,entry);
@@ -374,7 +376,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
     irb.CreateStore(irb.CreateAdd(irb.CreateLoad(irb.getInt32Ty(),pc),irb.getInt32(1)),pc);
     SwitchInst *dispatcher=SwitchInst::Create(opvalue,loop_end,0,dispatch);
     bool has_br=false;
-   errs()<<"initial for ops_handle\n";
+  // errs()<<"initial for ops_handle\n";
 #if 1
     for(xvm_op_info* op:ops)
     {
@@ -622,42 +624,42 @@ int xvmm::generateOpcodes(std::vector<BasicBlock *> &code,
                     int addr=queryAddr(cond,locals_addr_map,reg_addr_map);
                     int empty=0xdeadbeef;
                     // push addr
-                    printf("%lld",opcodes_raw.size());
+                   //printf("%lld",opcodes_raw.size());
                     opcodes_raw.push_back(push_addr_op);
                     pushBytes((unsigned char*)&addr,4,opcodes_raw);
-                    printf("push addr=[%d]\n",addr);
+                   //printf("push addr=[%d]\n",addr);
                     // br offset
-                    printf("%lld",opcodes_raw.size());
+                   //printf("%lld",opcodes_raw.size());
                     br_to_fix.emplace_back(opcodes_raw.size(),br->getSuccessor(0));     
                     opcodes_raw.push_back(br_op);
                     pushBytes((unsigned char*)&empty,4,opcodes_raw);
-                    printf("branch offset=%d\n",empty);
+                   //printf("branch offset=%d\n",empty);
                     
                     
                     if(i==code.size()-1 || code[i+1]!=br->getSuccessor(1))              
                     {
                         int true_value=1;
                         //push addr
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(push_addr_op);
                         pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                        printf("push addr=[%d]\n",used_space);
+                       //printf("push addr=[%d]\n",used_space);
                         //store 1
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(store1_op);
                         pushBytes((unsigned char*)&true_value,1,opcodes_raw);
-                        printf("store imm1=%d\n",1);
+                       //printf("store imm1=%d\n",1);
                         //push addr
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(push_addr_op);
                         pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                        printf("push addr=[%d]\n",used_space);
+                       //printf("push addr=[%d]\n",used_space);
                         //br offset
                         br_to_fix.emplace_back(opcodes_raw.size(),br->getSuccessor(1));
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(br_op);
                         pushBytes((unsigned char*)&empty,4,opcodes_raw);
-                        printf("branch offset=%d\n",empty);
+                       //printf("branch offset=%d\n",empty);
                         used_space+=1;                          
                     }
                     
@@ -669,26 +671,26 @@ int xvmm::generateOpcodes(std::vector<BasicBlock *> &code,
                         int true_value=1;
                         int empty=0xdeadbeef;
                         //push addr
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(push_addr_op);
                         pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                        printf("push addr=[%d]\n",used_space);
+                       //printf("push addr=[%d]\n",used_space);
                         //store 1
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(store1_op);
                         pushBytes((unsigned char*)&true_value,1,opcodes_raw);
-                        printf("store imm1=%d\n",1);
+                       //printf("store imm1=%d\n",1);
                         //push addr
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(push_addr_op);
                         pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                        printf("push addr=[%d]\n",used_space);
+                       //printf("push addr=[%d]\n",used_space);
                         //br offset
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         br_to_fix.emplace_back(opcodes_raw.size(),br->getSuccessor(0));
                         opcodes_raw.push_back(br_op);
                         pushBytes((unsigned char*)&empty,4,opcodes_raw);
-                        printf("branch offset=%d\n",empty);
+                       //printf("branch offset=%d\n",empty);
                         used_space+=1;
                     }   
                     
@@ -707,90 +709,90 @@ int xvmm::generateOpcodes(std::vector<BasicBlock *> &code,
                         if(store_size==1)
                         {
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             
                             //store value
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(store1_op);
                             unsigned char r=val->getZExtValue()&0xff;
                             pushBytes((unsigned char*)&r,1,opcodes_raw);
-                            printf("store imm1=%d\n",r);
+                           //printf("store imm1=%d\n",r);
                             
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             used_space+=1;
                             
                         }
                         else if(store_size==2)
                         {
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             
                             //store value
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(store2_op);
                             unsigned short r=val->getZExtValue()&0xff;
                             pushBytes((unsigned char*)&r,2,opcodes_raw);
-                            printf("store imm2=%d\n",r);
+                           //printf("store imm2=%d\n",r);
                             
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             used_space+=2;
                         }
                         else if(store_size==4)
                         {
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             
                             //store value
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(store4_op);
                             unsigned int r=val->getZExtValue();
                             pushBytes((unsigned char*)&r,4,opcodes_raw);
-                            printf("store imm4=%d\n",r);
+                           //printf("store imm4=%d\n",r);
                             
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             used_space+=4;
                         }
                         else if(store_size==8)
                         {
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             
                             //store value
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(store8_op);
                             unsigned long long r=val->getZExtValue();
                             pushBytes((unsigned char*)&r,8,opcodes_raw);
-                            printf("store imm8=%lld\n",r);
+                           //printf("store imm8=%lld\n",r);
                             
                             //push addr
-                            printf("%lld",opcodes_raw.size());
+                           //printf("%lld",opcodes_raw.size());
                             opcodes_raw.push_back(push_addr_op);
                             pushBytes((unsigned char*)&used_space,4,opcodes_raw);
-                            printf("push addr=[%d]\n",used_space);
+                           //printf("push addr=[%d]\n",used_space);
                             used_space+=8;
                         }
                         else
@@ -800,10 +802,10 @@ int xvmm::generateOpcodes(std::vector<BasicBlock *> &code,
                     {
                         int addr=queryAddr(op,locals_addr_map,reg_addr_map);
                         //push addr
-                        printf("%lld",opcodes_raw.size());
+                       //printf("%lld",opcodes_raw.size());
                         opcodes_raw.push_back(push_addr_op);
                         pushBytes((unsigned char*)&addr,4,opcodes_raw);
-                        printf("push addr=[%d]\n",addr);
+                       //printf("push addr=[%d]\n",addr);
                     }
                     
                 }
@@ -813,23 +815,23 @@ int xvmm::generateOpcodes(std::vector<BasicBlock *> &code,
                     //handler addr
                     
                     int addr=queryAddr(&instr,locals_addr_map,reg_addr_map);
-                    printf("%lld",opcodes_raw.size());
+                   //printf("%lld",opcodes_raw.size());
                     opcodes_raw.push_back(vmop->opcode);
                     pushBytes((unsigned char*)&addr,4,opcodes_raw);
-                    printf("handler_%d st=[%d] name=%s\n",vmop->opcode,addr,vmop->instr->getOpcodeName());
+                   //printf("handler_%d st=[%d] name=%s\n",vmop->opcode,addr,vmop->instr->getOpcodeName());
                 }
                 else
                 {
                     //handler
-                    printf("%lld",opcodes_raw.size());
+                   //printf("%lld",opcodes_raw.size());
                     opcodes_raw.push_back(vmop->opcode);
-                    printf("handler_%d name=%s\n",vmop->opcode,vmop->instr->getOpcodeName());
+                   //printf("handler_%d name=%s\n",vmop->opcode,vmop->instr->getOpcodeName());
                 }
             }
             max_used_space=max_used_space>used_space?max_used_space:used_space;
-            printf("\n");
+           //printf("\n");
         }
-        printf("   block max used space: %d\n\n",max_used_space);
+       //printf("   block max used space: %d\n\n",max_used_space);
         new_mem_size=new_mem_size>max_used_space?new_mem_size:max_used_space;
     }
     for(std::pair<int,BasicBlock*> p:br_to_fix)
@@ -889,12 +891,12 @@ int xvmm::allocaMemory(BasicBlock &bb, std::map<Instruction *, int> &alloca_map,
     }
     /*for(Instruction &i:bb)
     {
-        printf("current opname: %s\n\t",i.getOpcodeName());
+       //printf("current opname: %s\n\t",i.getOpcodeName());
         if(alive[&i]->size()==0)
-            printf("null");
+           //printf("null");
         for(std::set<Instruction*>::iterator iter=alive[&i]->begin();iter!=alive[&i]->end();iter++)
-            printf("%s ",(*iter)->getOpcodeName());
-        printf("\n");
+           //printf("%s ",(*iter)->getOpcodeName());
+       //printf("\n");
     }*/
     //printf("value remain!\n");
     std::vector<std::pair<Instruction*,int>> current_alloc;
@@ -1038,11 +1040,14 @@ PreservedAnalyses xvmPass::run(Module &M, ModuleAnalysisManager &AM) {
     xvmm xvm;
     bool vm = false;
     for (Function &fn : M) {
-      if (!toObfuscate(RunXvm, &fn, "x-vm")) {
-        continue;
+      if (toObfuscate(RunXvm, &fn, "x-vm")){
+        const auto vm_ret = xvm.run_on_function(fn);
+        vm|=vm_ret;
       }
-      const auto vm_ret = xvm.run_on_function(fn);
-      vm|=vm_ret;
+      if(get_vm_fla_level()>5&&fn.getName().startswith("genrand.")){
+        const auto vm_ret = xvm.run_on_function(fn);
+        vm|=vm_ret;
+      }
     }
     if (vm) {
 

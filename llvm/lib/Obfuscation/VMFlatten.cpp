@@ -66,6 +66,12 @@ static cl::opt<int> VmObfuscationLevel(
     "vm-fla-level", cl::init(7),
     cl::desc("OLLVM - VmFlattenObfuscationPass Level"));
 
+
+namespace  llvm {
+    int get_vm_fla_level() {
+      return VmObfuscationLevel;
+    }
+}
 //0 Only-vm-fla
 //1 vm-fla with enc const
 //2 vm-fla with enc const with global ind
