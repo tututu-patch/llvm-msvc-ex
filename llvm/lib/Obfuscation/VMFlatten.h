@@ -7,7 +7,6 @@ br VMEntry
 
 
 VMEntry:
-addr=GEP opcode vmpc
 optype=load addr
 tmp1=vmpc+1
 addr1=GEP opcode tmp1
@@ -36,7 +35,7 @@ default:
 br VMEntry
   */
 
- #ifndef LLVM_VMFLAT_OBFUSCATION_H
+#ifndef LLVM_VMFLAT_OBFUSCATION_H
 #define LLVM_VMFLAT_OBFUSCATION_H
 
 #include "llvm/IR/LLVMContext.h"
