@@ -85,6 +85,15 @@ Add To VS Project Compiler Cmdline
 ```
 
 ```
+
+#### vm sample 
+```
+__attribute((__annotate__(("x-vm")))) void crypt_func(uint8_t *var,uint8_t*key,size_t var_size,size_t key_size){
+    for(auto i=0;i<var_size;i++){
+        var[i]^=key[i%key_size];
+    }
+}
+```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice
 - https://docs.github.com/en/get-started/quickstart/contributing-to-projects
