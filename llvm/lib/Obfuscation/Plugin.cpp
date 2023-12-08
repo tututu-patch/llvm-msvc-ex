@@ -11,6 +11,7 @@
 #include "VMFlatten.h"
 #include "xVMP.h"
 #include "xVMProtect.h"
+#include "CombineFunctions.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -35,6 +36,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(StringObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
           MPM.addPass(xvmPass());
+          MPM.addPass(CombineFunctionsPass());
         });
 
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,
