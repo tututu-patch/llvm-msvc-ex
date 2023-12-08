@@ -347,7 +347,7 @@ void xvmm::buildVMFunction(Function &f, Function &vm,
     for(std::pair<int,int> p:remap)
     {
         int ptr_addr=p.first,real_addr=p.second;
-        //ÀàÐÍÎÊÌâ
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Value *ptr=irb.CreateGEP(memory->getAllocatedType(),memory,{irb.getInt32(0),irb.getInt32(real_addr)});
         Value *to_store=irb.CreateGEP(memory->getAllocatedType(),memory,{irb.getInt32(0),irb.getInt32(ptr_addr)});
         irb.CreateStore(ptr,irb.CreateBitCast(to_store,ptr->getType()->getPointerTo()));
@@ -1040,7 +1040,7 @@ PreservedAnalyses xvmPass::run(Module &M, ModuleAnalysisManager &AM) {
     xvmm xvm;
     bool vm = false;
     for (Function &fn : M) {
-      if (toObfuscate(RunXvm, &fn, "x-vm")){
+      if (toObfuscate(false, &fn, "x-vm")){
         const auto vm_ret = xvm.run_on_function(fn);
         vm|=vm_ret;
       }
