@@ -69,22 +69,22 @@ namespace{
         std::vector<unsigned> &argPosList) {
         if (func_list.empty())
           return nullptr;
-        errs() << "Check Function Type\n";
+        //errs() << "Check Function Type\n";
         for (const auto func : func_list) {
           if (func->isDeclaration() ||
               func->hasAvailableExternallyLinkage() != 0 ||
               func->getFunctionType()->isVarArg() != false)
             return nullptr;
         }
-        errs() << "	Done\n";
-        errs() << "Prepare Function Type\n";
+        //errs() << "	Done\n";
+        //errs() << "Prepare Function Type\n";
         std::vector<Type *> ArgTypes;
         for (const auto func : func_list) {
           for (Argument &I : func->args())
             ArgTypes.push_back(I.getType());
         }
-        errs() << "	Done\n";
-        errs() << "Check Function Return Type\n";
+        //errs() << "	Done\n";
+        //errs() << "Check Function Return Type\n";
         Function *first = *func_list.begin();
         ArgTypes.push_back(Type::getInt32Ty(first->getParent()->getContext()));
         for (const auto func : func_list) {
@@ -102,8 +102,8 @@ namespace{
             Function::Create(fty, first->getLinkage(), first->getAddressSpace(),
                              name, first->getParent());
         Function ::arg_iterator iter = result->arg_begin();
-        errs() << "	Done\n";
-        errs() << "Start Working\n";
+        //errs() << "	Done\n";
+        //errs() << "Start Working\n";
         unsigned int index = 0;
         for (const auto func : func_list) {
           argPosList.push_back(index);
@@ -118,7 +118,7 @@ namespace{
                             returns, "",
                             &CodeInfo);
         }
-        errs() << "	Done\n";
+        //errs() << "	Done\n";
         return result;
     }
 
@@ -145,7 +145,7 @@ namespace{
         std::vector<unsigned> &value_list) {
         std::vector<BasicBlock *> entryBlocks;
         std::vector<BasicBlock *> bodyBlock;
-        errs() << "Get all entry blocks\n";
+        //errs() << "Get all entry blocks\n";
         for (const auto func : orig_list) {
           const BasicBlock *entry = &*func->begin();
           if (const auto ptr = static_cast<Value *>(v_map->lookup(entry)); isa<BasicBlock>(*ptr))
@@ -154,8 +154,8 @@ namespace{
             return false;
         }
         getBlocks(target, bodyBlock);
-        errs() << "	Done\n";
-        errs() << "Build switch\n";
+        //errs() << "	Done\n";
+        //errs() << "Build switch\n";
         BasicBlock *entry =
             BasicBlock::Create(target->getContext(), "Entry", target);
         BasicBlock *selector =
@@ -181,7 +181,7 @@ namespace{
         for (auto f = orig_list.begin();
              f != orig_list.end(); ++f) {
           unsigned int val = getUniqueNumber(rand_list);
-          errs() << val << '\n';
+          //errs() << val << '\n';
           ConstantInt *num_case = cast<ConstantInt>(
               ConstantInt::get(sw->getCondition()->getType(), val));
           value_list.push_back(val);
@@ -189,8 +189,8 @@ namespace{
 
           ++bblist_iter;
         }
-        errs() << "	Done\n";
-        errs() << "Add useless code\n";
+        //errs() << "	Done\n";
+        //errs() << "Add useless code\n";
         for (const auto basic_block : bodyBlock) {
           if (isa<BranchInst>(*basic_block->getTerminator())) {
             if (const auto br = reinterpret_cast<BranchInst *>(basic_block->
@@ -209,7 +209,7 @@ namespace{
             }
           }
         }
-        errs() << "	Done\n";
+        //errs() << "	Done\n";
         return true;
     }
 
@@ -260,29 +260,30 @@ namespace{
         std::vector<Function *> func_list;
         getFunctions(&module, func_list);
         std::vector<Function *> work_list;
-        errs() << "Function List:\n";
+        //errs() << "Function List:\n";
         for (auto &func : func_list) {
-          errs() << "	";
-          errs().write_escaped(func->getName()) << '\n';
+          //errs() << "	";
+          //errs().write_escaped(func->getName()) << '\n';
           if (!readAnnotate(func).find("combine")) {
-            errs() << "		-Add to work list\n";
+            //errs() << "		-Add to work list\n";
             work_list.push_back(func);
           }
         }
         ValueToValueMapTy VMap;
+        std::string funcName = formatv("mix.{0:x-}", cryptoutils->get_uint64_t());
         std::vector<unsigned int> values, argPos;
-        Function *target = Combine(work_list, &VMap, "MixFunction", argPos);
+        Function *target = Combine(work_list, &VMap, funcName, argPos);
         if (target == nullptr) {
-          errs() << "Combine Fail\n";
+          //errs() << "Combine Fail\n";
           return false;
         }
 
         if (!FixFunction(target, work_list, &VMap, values)) {
-          errs() << "FixFunction Fail\n";
+          //errs() << "FixFunction Fail\n";
           return false;
         }
         if (!FixCallInst(target, work_list, values, argPos)) {
-          errs() << "FixCallInst Fail\n";
+          //errs() << "FixCallInst Fail\n";
           return false;
         }
         module.getGlobalVariable("llvm.global.annotations")->eraseFromParent();

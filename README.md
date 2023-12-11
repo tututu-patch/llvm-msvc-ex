@@ -25,6 +25,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] 在vm-fla-enc中使用间接全局变量访问
 - [x] vm-fla-level 0~7 8个处理等级 7最强，0最弱，默认7
 - [x] 弱鸡vmp加入 
+- [x] add combine 
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -87,12 +88,43 @@ Add To VS Project Compiler Cmdline
 ```
 
 #### vm sample 
-```
+```c++
 __attribute((__annotate__(("x-vm")))) void crypt_func(uint8_t *var,uint8_t*key,size_t var_size,size_t key_size){
     for(auto i=0;i<var_size;i++){
         var[i]^=key[i%key_size];
     }
 }
+```
+
+#### combine sample
+```c++
+__attribute((__annotate__(("combine")))) int a1(int a, int b)
+{
+    printf("%d , %d\r\n", a, b);
+    printf("%x\r\n", a ^ b);
+    return a + b;
+}
+
+
+__attribute((__annotate__(("combine")))) int a2(int a, int b)
+{
+    for (auto i = std::min(a, b);i < std::max(a, b);i++)
+    {
+        printf("%x,", i);
+    }
+    printf("\n");
+   
+    return a * b+ a1(a, b);;
+}
+
+
+__attribute((__annotate__(("combine")))) int a3(int a,int b)
+{
+    printf("%d , %d\r\n", a+1, b+2);
+    printf("%x\r\n", a ^ b);
+    return a + b+a^b+ a2(a, b);
+}
+
 ```
 ### How to contribute?
 - https://github.com/HyunCafe/contribute-practice
