@@ -536,7 +536,9 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                                     << Name << LookupCtx << DroppedSpecifier
                                     << SS.getRange());
         } else {
+#ifndef _WIN32
           diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest) << Name);
+#endif
         }
       }
     }
@@ -1714,6 +1716,8 @@ class ConstraintRefersToContainingTemplateChecker
   // Friend, likely because it was referred to without its template arguments.
   void CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
     CheckingRD = CheckingRD->getMostRecentDecl();
+    if (!CheckingRD->isTemplated())
+      return;
 
     for (const DeclContext *DC = Friend->getLexicalDeclContext();
          DC && !DC->isFileContext(); DC = DC->getParent())
@@ -6622,6 +6626,9 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
   }
 
   if (EvalResult.Val.isLValue() && !EvalResult.Val.getLValueBase()) {
+#ifdef _WIN32
+    return NPV_NotNullPointer;
+#endif
     // We found a pointer that isn't null, but doesn't refer to an object.
     // We could just return NPV_NotNullPointer, but we can print a better
     // message with the information we have here.
