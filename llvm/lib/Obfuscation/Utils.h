@@ -24,5 +24,5 @@ void fixStack(llvm::Function &F,bool use_alloc);
 void OutputIR(llvm::Function &Func);
 void turnOffOptimization(llvm::Function *f);
 bool isMemberFunction(llvm::Function *F);
-
+bool valueEscapes(const llvm::Instruction &Inst);
 #endif
