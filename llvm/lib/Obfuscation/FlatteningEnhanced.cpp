@@ -133,8 +133,10 @@ bool FlaEnhPass::runOnFunction(Function *f) {
   }
   const int every =
       (int)((double)(origBB.size() - retBlockNum) / (double)loopEndNum);
-  errs() << f->getName() << " " << every << " " << loopEndNum << " "
-         << origBB.size() - retBlockNum << "\n";
+
+  
+  //errs() << f->getName() << " " << every << " " << loopEndNum << " "
+  //       << origBB.size() - retBlockNum << "\n";
 
   int counter = 0;
   auto end_iter = loopEndBlocks.begin();

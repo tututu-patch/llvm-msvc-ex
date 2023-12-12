@@ -195,6 +195,10 @@ Function *xvmm::virtualization(Function &f) {
   Function *vm_func =
       Function::Create(f.getFunctionType(), f.getLinkage(),
                        f.getName() + Twine("_VM"), f.getParent());
+    if (toObfuscate(false, &f, "x-full")){
+        //errs()<<"full:"<<f.getName().str()<<"\n";
+        vm_func->setAnnotationStrings("x-full");
+    }
   buildVMFunction(f, *vm_func, ops, new_mem_size, oparr_var, 256, remap,
                   alloca_map);
   return vm_func;

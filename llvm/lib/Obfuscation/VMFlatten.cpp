@@ -92,6 +92,7 @@ struct VMFlat {
     unsigned int type;
     unsigned int op1, op2;
   };
+  unsigned int VM_LEVEL;
   unsigned int RUN_BLOCK;
   unsigned int JMP_BORING;
   unsigned int JMP_SELECT;
@@ -254,9 +255,9 @@ bool VMFlat::DoFlatten(Function *f) {
   }
 
   if(f->getName().startswith("??") || f->getName().contains("std@")) {
-    if(VmObfuscationLevel<5)
+    if(VM_LEVEL<5)
       return false;
-    if(VmObfuscationLevel<6)
+    if(VM_LEVEL<6)
       return ollvm::flatten(*f);
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
@@ -267,9 +268,9 @@ bool VMFlat::DoFlatten(Function *f) {
       f->hasCXXEH() || f->hasCXXSEH() )
   {
     //errs()<<"FLA-Function Name = "<<f->getName()<<"\r\n";
-    if(VmObfuscationLevel<=4)
+    if(VM_LEVEL<=4)
       return false;
-    if(VmObfuscationLevel<6)
+    if(VM_LEVEL<6)
       return ollvm::flatten(*f);
     ollvm::bogus(*f);
     ollvm::doF(*f->getParent(),*f);
@@ -280,7 +281,7 @@ bool VMFlat::DoFlatten(Function *f) {
 
   if(f->getName().startswith("genrand."))
   {
-    if(VmObfuscationLevel==7)
+    if(VM_LEVEL==7)
       return true;
   }
 
@@ -292,7 +293,7 @@ bool VMFlat::DoFlatten(Function *f) {
   std::vector<BasicBlock *> orig_bb;
   get_blocks(f, &orig_bb);
   if (orig_bb.size() <= 1) {
-    if(VmObfuscationLevel==7){
+    if(VM_LEVEL==7){
       ollvm::bogus(*f);
       ollvm::doF(*f->getParent(),*f);
       return DoFlatten(f);
@@ -698,6 +699,11 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
     // errs() << "VmFlattenObfuscationPass application basic blocks percentage "
     "-vm_prob=x must be 0 < x <= 100";
     return false;
+  }  
+  VM_LEVEL = VmObfuscationLevel;
+  if (toObfuscate(false, &function, "x-full")){
+    VM_LEVEL = 7;
+    //errs()<<"vm-full:"<<function.getName().str()<<"\n";
   }
   new_name_pre = std::to_string(cryptoutils->get_uint32_t());
   bool changed = false;
@@ -706,22 +712,22 @@ bool VMFlat::runVmFlaOnFunction(Function &function) {
   }
   if (changed)
   {
-    if(VmObfuscationLevel>=3)
+    if(VM_LEVEL>=3)
     {
       insertMemoryAttackTaint(function);
     }
-    if(VmObfuscationLevel>=4)
+    if(VM_LEVEL>=4)
     {
        insertSymbolicMemorySnippet(function);
     }
-    if(VmObfuscationLevel>=1)
+    if(VM_LEVEL>=1)
     {
       ConstEncryption str;
       str.runOnFunction(function,false);
     }
-    if(VmObfuscationLevel>=2)
+    if(VM_LEVEL>=2)
     {
-       IndirectGlobalVariable gv;
+      IndirectGlobalVariable gv;
       gv.runOnFunction(function);
     }
     turnOffOptimization(&function);
