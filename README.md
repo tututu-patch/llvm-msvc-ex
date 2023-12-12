@@ -25,7 +25,9 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] 在vm-fla-enc中使用间接全局变量访问
 - [x] vm-fla-level 0~7 8个处理等级 7最强，0最弱，默认7
 - [x] 弱鸡vmp加入 
-- [x] add combine 
+- [x] 添加combine功能
+- [x] 添加fla強化 x-fla-enh
+- [x] x-full 功能，在function上使用vm-fla-level=7
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -111,9 +113,9 @@ Add To VS Project Compiler Cmdline
 
 ```
 
-#### vm sample 
+#### vm sample and x-full sample
 ```c++
-__attribute((__annotate__(("x-vm")))) void crypt_func(uint8_t *var,uint8_t*key,size_t var_size,size_t key_size){
+__attribute((__annotate__(("x-vm,x-full")))) void crypt_func(uint8_t *var,uint8_t*key,size_t var_size,size_t key_size){
     for(auto i=0;i<var_size;i++){
         var[i]^=key[i%key_size];
     }
