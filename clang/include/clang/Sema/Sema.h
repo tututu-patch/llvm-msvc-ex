@@ -12654,6 +12654,9 @@ public:
   /// Check to see if a given expression could have '.c_str()' called on it.
   bool hasCStrMethod(const Expr *E);
 
+  /// Check to see if the type is ATL::CStringT
+  bool isATLCStringType(const QualType &Ty);
+
   /// GatherArgumentsForCall - Collector argument expressions for various
   /// form of call prototypes.
   bool GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
@@ -12668,6 +12671,9 @@ public:
   // will create a runtime trap if the resulting type is not a POD type.
   ExprResult DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
                                               FunctionDecl *FDecl);
+
+  // Promotes ATL C String variadic arguments to the appropriate type.
+  Expr *ATLCStringTVariadicArgumentPromotion(Expr *E, SourceLocation Loc);
 
   /// Context in which we're performing a usual arithmetic conversion.
   enum ArithConvKind {
