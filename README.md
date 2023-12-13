@@ -29,6 +29,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] 添加fla強化 x-fla-enh
 - [x] x-full 功能，在function上使用vm-fla-level=7
 - [x] 字符串加密等相似加了combine
+- [ ] 自定義分割合併 combine_func[tag_number] 模式
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
