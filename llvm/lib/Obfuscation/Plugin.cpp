@@ -37,7 +37,9 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(StringObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(DataObfuscationPass()));
           MPM.addPass(xvmPass());
-          MPM.addPass(CombineFunctionsPass());
+          MPM.addPass(CombineFunctionsPass("combine0"));
+          MPM.addPass(CombineFunctionsPass("combine1"));
+          MPM.addPass(CombineFunctionsPass("combine_func"));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningEnhanced()));
         });
 

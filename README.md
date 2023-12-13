@@ -102,11 +102,11 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 Add To VS Project Compiler Cmdline
 #### 最大保护（文件将超过100MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh
 ```
 #### 单纯使用特色部分（轻量模式 不加Light会导致文件飞升到10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=4
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=3 -mllvm -x-fla-enh
 ```
 #### 需要修改载研究的部分
 ```
@@ -124,7 +124,7 @@ __attribute((__annotate__(("x-vm,x-full")))) void crypt_func(uint8_t *var,uint8_
 
 #### combine sample
 ```c++
-__attribute((__annotate__(("combine")))) int a1(int a, int b)
+__attribute((__annotate__(("combine_func")))) int a1(int a, int b)
 {
     printf("%d , %d\r\n", a, b);
     printf("%x\r\n", a ^ b);
@@ -132,24 +132,26 @@ __attribute((__annotate__(("combine")))) int a1(int a, int b)
 }
 
 
-__attribute((__annotate__(("combine")))) int a2(int a, int b)
+__attribute((__annotate__(("combine_func")))) int a2(int a, int b)
 {
+    std::cout << "hello1" << std::endl;
     for (auto i = std::min(a, b);i < std::max(a, b);i++)
     {
         printf("%x,", i);
     }
     printf("\n");
    
-    return a * b+ a1(a, b);;
+    return a * b+ a1(a, b);
 }
 
 
-__attribute((__annotate__(("combine")))) int a3(int a,int b)
+__attribute((__annotate__(("combine_func")))) int a3(int a,int b)
 {
     printf("%d , %d\r\n", a+1, b+2);
     printf("%x\r\n", a ^ b);
     return a + b+a^b+ a2(a, b);
 }
+
 
 ```
 ### How to contribute?

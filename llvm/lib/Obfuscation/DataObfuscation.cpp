@@ -3,6 +3,7 @@
 #include "ConstObfuscation.h"
 #include "CryptoUtils.h"
 #include "Utils.h"
+#include "VMFlatten.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
@@ -112,6 +113,14 @@ Value *DataObfuscator::genRandIndex(Instruction *I) {
   Function *genFunc = cast<Function>(
       M.getOrInsertFunction(funcName, FunctionType::getInt32Ty(*CONTEXT))
           .getCallee());
+  if (get_vm_fla_level()==7)
+  {
+    genFunc->setAnnotationStrings("x-vm,x-full");
+  }
+  else {
+    genFunc->setAnnotationStrings("combine0");
+  }
+  
   BasicBlock *entry = BasicBlock::Create(*CONTEXT, "entry", genFunc);
   IRBuilder<> builder(*CONTEXT);
   builder.SetInsertPoint(entry);

@@ -39,6 +39,7 @@ using namespace llvm;
 
 namespace{
     struct CombineFunction{
+        std::string combine_string;
         void getBlocks(Function *function,std::vector<BasicBlock*> &lists);
         void getFunctions(Module *module,std::vector<Function*> &lists);
         Function *Combine(std::vector<Function*> &func_list,ValueToValueMapTy* VMap,Twine name,std::vector<unsigned int> &argPosList);
@@ -46,6 +47,7 @@ namespace{
         bool FixFunction(Function *target,std::vector<Function*> &orig_list,ValueToValueMapTy *v_map,std::vector<unsigned int> &value_list);
         bool FixCallInst(Function *target, std::vector<Function *> &orig_list, std::vector<unsigned> &
                          value_list, std::vector<unsigned> &arg_pos_list);
+        bool CombineFunctions(Module &m,std::vector<Function *> &func_list);
         bool runOnModule(Module &module);
     };
 
@@ -256,41 +258,46 @@ namespace{
         return true;
     }
 
+    bool CombineFunction::CombineFunctions(Module &m,std::vector<Function *> &func_list) {
+        ValueToValueMapTy VMap;
+        std::string funcName =
+            formatv("mix.{0:x-}", cryptoutils->get_uint64_t());
+        std::vector<unsigned int> values, argPos;
+        Function *target = Combine(func_list, &VMap, funcName, argPos);
+        if (target == nullptr) {
+          // errs() << "Combine Fail\n";
+          return false;
+        }
+
+        if (!FixFunction(target, func_list, &VMap, values)) {
+          // errs() << "FixFunction Fail\n";
+          return false;
+        }
+        if (!FixCallInst(target, func_list, values, argPos)) {
+          // errs() << "FixCallInst Fail\n";
+          return false;
+        }
+        //m.getGlobalVariable("llvm.global.annotations")->eraseFromParent();
+        for (const auto &func : func_list) {
+          func->eraseFromParent();
+        }
+    }
+
     bool CombineFunction::runOnModule(Module &module) {
         std::vector<Function *> func_list;
         getFunctions(&module, func_list);
         std::vector<Function *> work_list;
-        //errs() << "Function List:\n";
+       // errs() << "Function List:\n";
         for (auto &func : func_list) {
-          //errs() << "	";
-          //errs().write_escaped(func->getName()) << '\n';
-          if (!readAnnotate(func).find("combine")) {
-            //errs() << "		-Add to work list\n";
+         // errs() << func->getName().str() << "\n";
+          if (std::string::npos!=readAnnotate(func).find(combine_string)) {
+           // errs() << "		-Add to work list "<<combine_string<<"\n";
             work_list.push_back(func);
           }
         }
-        ValueToValueMapTy VMap;
-        std::string funcName = formatv("mix.{0:x-}", cryptoutils->get_uint64_t());
-        std::vector<unsigned int> values, argPos;
-        Function *target = Combine(work_list, &VMap, funcName, argPos);
-        if (target == nullptr) {
-          //errs() << "Combine Fail\n";
-          return false;
-        }
-
-        if (!FixFunction(target, work_list, &VMap, values)) {
-          //errs() << "FixFunction Fail\n";
-          return false;
-        }
-        if (!FixCallInst(target, work_list, values, argPos)) {
-          //errs() << "FixCallInst Fail\n";
-          return false;
-        }
-        module.getGlobalVariable("llvm.global.annotations")->eraseFromParent();
-        for (const auto &func : work_list) {
-          func->eraseFromParent();
-        }
-        return true;
+        const bool ret = CombineFunctions(module, work_list);
+        //errs() << "combine done\n";
+        return ret;
     }
 }
 
@@ -299,8 +306,13 @@ PreservedAnalyses CombineFunctionsPass::run(Module &M, ModuleAnalysisManager &AM
 
   if constexpr (true) {
     CombineFunction a;
+    a.combine_string = this->combine_str;
     if(a.runOnModule(M))
         return PreservedAnalyses::none();
   }
   return PreservedAnalyses::all();
+}
+
+CombineFunctionsPass::CombineFunctionsPass(const std::string &name) {
+  combine_str = name;
 }

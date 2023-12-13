@@ -195,12 +195,13 @@ Function *xvmm::virtualization(Function &f) {
   Function *vm_func =
       Function::Create(f.getFunctionType(), f.getLinkage(),
                        f.getName() + Twine("_VM"), f.getParent());
-    if (toObfuscate(false, &f, "x-full")){
-        //errs()<<"full:"<<f.getName().str()<<"\n";
-        vm_func->setAnnotationStrings("x-full");
-    }
+  if (const auto ann = readAnnotate(&f);
+      ann.find("x-full") != std::string::npos) {
+    vm_func->setAnnotationStrings("vm-fla,x-full,x-fla-enh");
+  }
   buildVMFunction(f, *vm_func, ops, new_mem_size, oparr_var, 256, remap,
                   alloca_map);
+  turnOffOptimization(vm_func);
   return vm_func;
 }
 
@@ -1045,10 +1046,6 @@ PreservedAnalyses xvmPass::run(Module &M, ModuleAnalysisManager &AM) {
     bool vm = false;
     for (Function &fn : M) {
       if (toObfuscate(false, &fn, "x-vm")){
-        const auto vm_ret = xvm.run_on_function(fn);
-        vm|=vm_ret;
-      }
-      if(get_vm_fla_level()==7&&fn.getName().startswith("genrand.")){
         const auto vm_ret = xvm.run_on_function(fn);
         vm|=vm_ret;
       }

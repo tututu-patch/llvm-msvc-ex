@@ -265,10 +265,12 @@ Function *StringEncryption::buildDecryptFunction(
   LLVMContext &Ctx = M->getContext();
   IRBuilder<> IRB(Ctx);
   FunctionType *FuncTy = FunctionType::get(
-      Type::getVoidTy(Ctx), {IRB.getInt8PtrTy(), IRB.getInt8PtrTy()}, false);
+      Type::getInt32Ty(Ctx), {IRB.getInt8PtrTy(), IRB.getInt8PtrTy()}, false);
   Function *DecFunc = Function::Create(
       FuncTy, GlobalValue::PrivateLinkage,
       "goron_decrypt_string_" + Twine::utohexstr(Entry->ID), M);
+  
+  DecFunc->setAnnotationStrings("combine1");
 
   auto ArgIt = DecFunc->arg_begin();
   Argument *PlainString = ArgIt; // output
@@ -326,7 +328,7 @@ Function *StringEncryption::buildDecryptFunction(
   IRB.CreateBr(Exit);
 
   IRB.SetInsertPoint(Exit);
-  IRB.CreateRetVoid();
+  IRB.CreateRet(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
 
   return DecFunc;
 }
