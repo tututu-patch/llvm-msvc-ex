@@ -328,7 +328,7 @@ Function *StringEncryption::buildDecryptFunction(
   IRB.CreateBr(Exit);
 
   IRB.SetInsertPoint(Exit);
-  IRB.CreateRet(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+  IRB.CreateRet(ConstantInt::get(Type::getInt32Ty(Ctx), cryptoutils->get_uint32_t()));
 
   return DecFunc;
 }
