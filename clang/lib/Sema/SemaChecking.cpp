@@ -11405,14 +11405,24 @@ bool Sema::hasCStrMethod(const Expr *E) {
   return false;
 }
 
+/// Check to see if a given expression could have '.GetBuffer()' called on it.
+bool Sema::hasGetBufferMethod(const Expr *E) {
+  using MethodSet = llvm::SmallPtrSet<CXXMethodDecl *, 1>;
+
+  MethodSet Results =
+      CXXRecordMembersNamed<CXXMethodDecl>("GetBuffer", *this, E->getType());
+  for (MethodSet::iterator MI = Results.begin(), ME = Results.end(); MI != ME;
+       ++MI)
+    if ((*MI)->getMinRequiredArguments() == 0)
+      return true;
+  return false;
+}
+
 /// Check to see if the type is ATL::CStringT
 bool Sema::isATLCStringType(const QualType &Ty) {
-  clang::QualType CanonicalType = Ty.getCanonicalType();
-  std::string TypeName = Ty.getAsString();
-  std::string FullTypeName =
-      CanonicalType.getAsString(Context.getPrintingPolicy());
-  if ((TypeName == "CStringA" || TypeName == "CStringW") &&
-      FullTypeName._Starts_with("ATL::CStringT"))
+  if (Ty.getCanonicalType()
+          .getAsString(Context.getPrintingPolicy())
+          ._Starts_with("ATL::CStringT<"))
     return true;
   return false;
 }

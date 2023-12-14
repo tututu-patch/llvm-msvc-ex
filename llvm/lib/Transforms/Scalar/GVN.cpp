@@ -2326,6 +2326,8 @@ void GVNPass::ValueTable::eraseTranslateCacheEntry(
 // question.  This is fast because dominator tree queries consist of only
 // a few comparisons of DFS numbers.
 Value *GVNPass::findLeader(const BasicBlock *BB, uint32_t num) {
+  if (!BB)
+    return nullptr;
   LeaderTableEntry Vals = LeaderTable[num];
   if (!Vals.Val) return nullptr;
 
@@ -2337,7 +2339,7 @@ Value *GVNPass::findLeader(const BasicBlock *BB, uint32_t num) {
 
   LeaderTableEntry* Next = Vals.Next;
   while (Next) {
-    if (DT->dominates(Next->BB, BB)) {
+    if (Next->BB && DT->dominates(Next->BB, BB)) {
       if (isa<Constant>(Next->Val)) return Next->Val;
       if (!Val) Val = Next->Val;
     }
