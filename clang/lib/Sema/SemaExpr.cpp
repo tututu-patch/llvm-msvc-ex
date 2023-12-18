@@ -1109,8 +1109,8 @@ Expr *Sema::ATLCStringTVariadicArgumentPromotion(Expr *E, SourceLocation Loc) {
   if (!isATLCStringType(E->getType()))
     return E;
 
-  auto CreateCastExpr = [this, E,
-                         &Loc](QualType TargetType) -> CStyleCastExpr* {
+  // Helper function to create a cast expression to a pointer type with const.
+  auto CreateCastExpr = [this, E, &Loc](QualType TargetType) -> Expr * {
     return CStyleCastExpr::Create(
         Context, Context.getPointerType(TargetType.withConst()), VK_PRValue,
         CK_UserDefinedConversion, E, nullptr, CurFPFeatureOverrides(),
@@ -1119,12 +1119,30 @@ Expr *Sema::ATLCStringTVariadicArgumentPromotion(Expr *E, SourceLocation Loc) {
         Loc, Loc);
   };
 
+  // Helper function to build a call to the 'GetBuffer' method.
+  auto CreateGetBufferExpr = [this, E]() -> Expr * {
+    CXXMethodDecl *GetBufferMethodDecl = getGetBufferMethodDecl(E);
+    if (!GetBufferMethodDecl)
+      return nullptr;
+    CXXConversionDecl *Conv = cast<CXXConversionDecl>(GetBufferMethodDecl);
+    ExprResult GetBufferCall =
+        BuildCXXMemberCallExpr(E, GetBufferMethodDecl, Conv, false);
+    if (GetBufferCall.isInvalid())
+      return nullptr;
+    return GetBufferCall.get();
+  };
+
   std::string FullTypeName =
       E->getType().getCanonicalType().getAsString(Context.getPrintingPolicy());
   if (FullTypeName == "ATL::CStringT<wchar_t, StrTraitMFC<wchar_t>>") {
     E = CreateCastExpr(Context.WCharTy);
   } else if (FullTypeName == "ATL::CStringT<char, StrTraitMFC<>>") {
     E = CreateCastExpr(Context.CharTy);
+  } else if (FullTypeName == "ATL::CStringT<wchar_t, ATL::StrTraitATL<wchar_t, "
+                             "ATL::ChTraitsCRT<wchar_t>>>" ||
+             FullTypeName == "ATL::CStringT<char, ATL::StrTraitATL<char, "
+                             "ATL::ChTraitsCRT<>>>") {
+    E = CreateGetBufferExpr();
   }
 
   return E;
