@@ -6713,6 +6713,43 @@ static bool CheckTemplateArgumentIsCompatibleWithParameter(
   return false;
 }
 
+/// Checks whether the given template argument is the non-null pointer.
+static bool CheckTemplateArgumentNonNullPointer(
+    Sema &S, NonTypeTemplateParmDecl *Param, QualType ParamType, Expr *Arg,
+    TemplateArgument &SugaredConverted, TemplateArgument &CanonicalConverted) {
+#ifndef _WIN32
+  return false;
+#endif
+
+  if (!ParamType->isPointerType())
+    return false;
+
+  if (ParamType->isNullPtrType())
+    return false;
+
+  if (Expr *ArgCast = Arg->IgnoreParenCasts()) {
+    if (ParamType->isVoidPointerType() &&
+        ArgCast->getType()->isIntegralOrEnumerationType()) {
+      llvm::APSInt Value;
+      // Convert the argument to an unsigned integer type.
+      ExprResult ArgResult = S.CheckConvertedConstantExpression(
+          ArgCast, S.Context.getUIntPtrType(), Value, Sema::CCEK_TemplateArg);
+      if (!ArgResult.isInvalid()) {
+        // Create a template argument with the converted value and the original
+        // argument type.
+        SugaredConverted = TemplateArgument(
+            S.Context, Value, S.Context.getPointerType(ArgCast->getType()));
+        // Get the canonical form of the template argument.
+        CanonicalConverted =
+            S.Context.getCanonicalTemplateArgument(SugaredConverted);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Checks whether the given template argument is the address
 /// of an object or function according to C++ [temp.arg.nontype]p1.
 static bool CheckTemplateArgumentAddressOfObjectOrFunction(
@@ -6846,8 +6883,13 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   }
 
   if (!Entity) {
+#ifdef _WIN32
+    S.Diag(Arg->getBeginLoc(), diag::warn_template_arg_not_decl_ref)
+        << Arg->getSourceRange();
+#else
     S.Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
         << Arg->getSourceRange();
+#endif
     S.Diag(Param->getLocation(), diag::note_template_param_here);
     return true;
   }
@@ -7676,9 +7718,18 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     assert(ParamType->getPointeeType()->isIncompleteOrObjectType() &&
            "Only object pointers allowed here");
 
-    if (CheckTemplateArgumentAddressOfObjectOrFunction(
-            *this, Param, ParamType, Arg, SugaredConverted, CanonicalConverted))
+  if (CheckTemplateArgumentAddressOfObjectOrFunction(*this, Param, ParamType,
+                                                       Arg, SugaredConverted,
+                                                       CanonicalConverted)) {
+      if (CheckTemplateArgumentNonNullPointer(*this, Param, ParamType, Arg,
+                                              SugaredConverted,
+                                              CanonicalConverted))
+        return Arg;
+      else
+        Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
+            << Arg->getSourceRange();
       return ExprError();
+    }
     return Arg;
   }
 
