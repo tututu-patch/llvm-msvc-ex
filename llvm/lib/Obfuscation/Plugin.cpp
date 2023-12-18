@@ -13,6 +13,7 @@
 #include "xVMProtect.h"
 #include "CombineFunctions.h"
 #include "FlatteningEnhanced.h"
+#include "VariableRotation.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -41,6 +42,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(CombineFunctionsPass("combine1"));
           MPM.addPass(CombineFunctionsPass("combine_func"));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningEnhanced()));
+          MPM.addPass(VariableRotationPass());
         });
 
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,
