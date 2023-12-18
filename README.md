@@ -30,6 +30,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] x-full 功能，在function上使用vm-fla-level=7
 - [x] 字符串加密等相似加了combine
 - [ ] 自定義分割合併 combine_func[tag_number] 模式
+- [x] x-var-rot 變量旋轉----並不複雜 
 
 
 [![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
@@ -104,11 +105,11 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 Add To VS Project Compiler Cmdline
 #### 最大保护（文件将超过100MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh -mllvm -x-var-rot
 ```
 #### 单纯使用特色部分（轻量模式 不加Light会导致文件飞升到10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=3 -mllvm -x-fla-enh
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=3 -mllvm -x-fla-enh -mllvm -x-var-rot
 ```
 #### 需要修改载研究的部分
 ```
