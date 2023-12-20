@@ -6721,10 +6721,7 @@ static bool CheckTemplateArgumentNonNullPointer(
   return false;
 #endif
 
-  if (!ParamType->isPointerType())
-    return false;
-
-  if (ParamType->isNullPtrType())
+  if (!ParamType->isPointerType() || ParamType->isNullPtrType())
     return false;
 
   if (Expr *ArgCast = Arg->IgnoreParenCasts()) {
@@ -7349,8 +7346,16 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     APValue Value;
     ExprResult ArgResult = CheckConvertedConstantExpression(
         Arg, ParamType, Value, CCEK_TemplateArg, Param);
-    if (ArgResult.isInvalid())
+    if (ArgResult.isInvalid()) {
+      if (CheckTemplateArgumentNonNullPointer(*this, Param, ParamType, Arg,
+                                              SugaredConverted,
+                                              CanonicalConverted))
+        return Arg;
+      else
+        Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
+            << Arg->getSourceRange();
       return ExprError();
+    }
 
     // For a value-dependent argument, CheckConvertedConstantExpression is
     // permitted (and expected) to be unable to determine a value.
