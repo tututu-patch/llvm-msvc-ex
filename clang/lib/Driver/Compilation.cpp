@@ -302,6 +302,7 @@ int Compilation::ExecuteJob(const Command &Job,
 void Compilation::ExecuteJobsMP(JobList &Jobs,
                                 FailingCommandList &FailingCommands,
                                 bool LogOnly) {
+  // Count the number of PCH (precompiled header) jobs.
   int PCHCount = 0;
   for (auto &Job : Jobs) {
     bool HasPCH = false;
@@ -320,6 +321,11 @@ void Compilation::ExecuteJobsMP(JobList &Jobs,
         return;
     }
   }
+
+  // Filter out such as "clang-cl.exe main.cpp".
+  if (Jobs.size() == 2 &&
+      StringRef(Jobs.getJobs()[1]->getArguments()[0]).starts_with("-out:"))
+    MPCoresNumber = 1;
 
   // Determine the number of parallel jobs to execute
   int MPJobsSize =
