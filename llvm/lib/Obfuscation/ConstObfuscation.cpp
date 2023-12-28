@@ -327,72 +327,72 @@ bool ConstEncryption::shouldEncryptConstant(Instruction *I) {
 void ConstEncryption::bitwiseSubstitute(Instruction *I, int i) {
   Module &M = *I->getModule();
   ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
-  IntegerType *type = val->getType();
+  IntegerType *type = cast<IntegerType>(val->getType());
   uint32_t width = type->getIntegerBitWidth();
-  // ²»¶ÔÎ»ÊýÐ¡ÓÚ8µÄÕûÊý½øÐÐÌæ´ú
+  // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ð¡ï¿½ï¿½8ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if (width < 8) {
-    // µÍ¿í¶ÈÖ»ÄÜ½»¸øÏßÐÔÌæ»»
+    // ï¿½Í¿ï¿½ï¿½ï¿½Ö»ï¿½Ü½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ»»
     // linearSubstitute(I,i);
     return;
   }
   uint32_t left = cryptoutils->get_uint32_t() % (width - 1) + 1;
   uint32_t right = width - left;
-  // Ëæ»úÉú³É x, y
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ x, y
   APInt mask = type->getMask();
   uint64_t randX = (cryptoutils->get_uint64_t() & mask).getZExtValue();
   uint64_t randY = (cryptoutils->get_uint64_t() & mask).getZExtValue();
-  // ¼ÆËã c = val ^ (x << left | y >> right)
+  // ï¿½ï¿½ï¿½ï¿½ c = val ^ (x << left | y >> right)
   APInt c = val->getValue() ^ (randX << left | randY >> right);
   ConstantInt *constX = CONST(type, randX);
   ConstantInt *constY = CONST(type, randY);
   ConstantInt *constC = (ConstantInt *)CONST(type, c);
-  // ´´½¨È«¾Ö±äÁ¿ x, y
+  // ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½ x, y
   GlobalVariable *x = new GlobalVariable(
       M, type, false, GlobalValue::PrivateLinkage, constX, "x");
   GlobalVariable *y = new GlobalVariable(
       M, type, false, GlobalValue::PrivateLinkage, constY, "y");
   LoadInst *opX = new LoadInst(type, x, "", I);
   LoadInst *opY = new LoadInst(type, y, "", I);
-  // ¹¹Ôì op = (x << left | y >> right) ^ c ±í´ïÊ½
+  // ï¿½ï¿½ï¿½ï¿½ op = (x << left | y >> right) ^ c ï¿½ï¿½ï¿½ï¿½Ê½
   BinaryOperator *op1 =
       BinaryOperator::CreateShl(opX, CONST(type, left), "", I);
   BinaryOperator *op2 =
       BinaryOperator::CreateLShr(opY, CONST(type, right), "", I);
   BinaryOperator *op3 = BinaryOperator::CreateOr(op1, op2, "", I);
   BinaryOperator *op4 = BinaryOperator::CreateXor(op3, constC, "", I);
-  // ÓÃ±í´ïÊ½ (x << left | y >> right) ^ c Ìæ»»Ô­³£Á¿²Ù×÷Êý
+  // ï¿½Ã±ï¿½ï¿½ï¿½Ê½ (x << left | y >> right) ^ c ï¿½æ»»Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   I->setOperand(i, op4);
 }
 
 void ConstEncryption::linearSubstitute(Instruction *I, int i) {
   Module &M = *I->getModule();
   ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
-  IntegerType *type = val->getType();
-  // Ëæ»úÉú³É x, y, a, b
+  IntegerType *type = cast<IntegerType>(val->getType());
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ x, y, a, b
   uint64_t randX = cryptoutils->get_uint64_t(),
            randY = cryptoutils->get_uint64_t();
   uint64_t randA = cryptoutils->get_uint64_t(),
            randB = cryptoutils->get_uint64_t();
-  // ¼ÆËã c = val - (ax + by)
+  // ï¿½ï¿½ï¿½ï¿½ c = val - (ax + by)
   APInt c = val->getValue() - (randA * randX + randB * randY);
   ConstantInt *constX = CONST(type, randX);
   ConstantInt *constY = CONST(type, randY);
   ConstantInt *constA = CONST(type, randA);
   ConstantInt *constB = CONST(type, randB);
   ConstantInt *constC = (ConstantInt *)CONST(type, c);
-  // ´´½¨È«¾Ö±äÁ¿ x, y
+  // ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½ x, y
   GlobalVariable *x = new GlobalVariable(
       M, type, false, GlobalValue::PrivateLinkage, constX, "x");
   GlobalVariable *y = new GlobalVariable(
       M, type, false, GlobalValue::PrivateLinkage, constY, "y");
   LoadInst *opX = new LoadInst(type, x, "", I);
   LoadInst *opY = new LoadInst(type, y, "", I);
-  // ¹¹Ôì op = ax + by + c ±í´ïÊ½
+  // ï¿½ï¿½ï¿½ï¿½ op = ax + by + c ï¿½ï¿½ï¿½ï¿½Ê½
   BinaryOperator *op1 = BinaryOperator::CreateMul(opX, constA, "", I);
   BinaryOperator *op2 = BinaryOperator::CreateMul(opY, constB, "", I);
   BinaryOperator *op3 = BinaryOperator::CreateAdd(op1, op2, "", I);
   BinaryOperator *op4 = BinaryOperator::CreateAdd(op3, constC, "", I);
-  // ÓÃ±í´ïÊ½ ax + by + c Ìæ»»Ô­³£Á¿²Ù×÷Êý
+  // ï¿½Ã±ï¿½ï¿½ï¿½Ê½ ax + by + c ï¿½æ»»Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   I->setOperand(i, op4);
 }
 

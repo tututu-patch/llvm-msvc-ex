@@ -141,7 +141,7 @@ Value *DataObfuscator::genRandIndex(Instruction *I) {
 void DataObfuscator::substitute(Instruction *I, int i) {
   Module &M = *I->getModule();
   ConstantInt *val = cast<ConstantInt>(I->getOperand(i));
-  IntegerType *eleType = val->getType();
+  IntegerType *eleType = cast<IntegerType>(val->getType());
   ArrayType *arrayType = ArrayType::get(eleType, 3);
   GlobalVariable *valTriple = new GlobalVariable(
       M, arrayType, true, GlobalValue::PrivateLinkage,
