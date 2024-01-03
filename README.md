@@ -110,6 +110,10 @@ msbuild /m -p:Configuration=release INSTALL.vcxproj
 
 ### 混淆例子
 Add To VS Project Compiler Cmdline
+
+set /GL off
+
+set /O2 on
 #### 最大保护（文件将超过100MB）
 ```
 -mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh -mllvm -x-var-rot
