@@ -116,7 +116,7 @@ Add To VS Project Compiler Cmdline
 ```
 #### 单纯使用特色部分（轻量模式 不加Light会导致文件飞升到10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=3 -mllvm -x-fla-enh -mllvm -x-var-rot
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=0 -mllvm -x-fla-enh
 ```
 #### 需要修改载研究的部分
 ```
