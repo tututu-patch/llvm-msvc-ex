@@ -36,6 +36,9 @@
 #include <vector>
 
 using namespace llvm;
+static cl::opt<bool>
+    RunCombineObfuscationPass("x-combine", cl::init(false),
+                           cl::desc("OLLVM - Combine Functions"));
 
 namespace{
     struct CombineFunction{
@@ -304,7 +307,8 @@ namespace{
 
 PreservedAnalyses CombineFunctionsPass::run(Module &M, ModuleAnalysisManager &AM) {
 
-  if constexpr (true) {
+  if(RunCombineObfuscationPass)
+  {
     CombineFunction a;
     a.combine_string = this->combine_str;
     if(a.runOnModule(M))
