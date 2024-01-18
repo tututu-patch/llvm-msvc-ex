@@ -10,7 +10,7 @@ namespace llvm {
 class CombineFunctionsPass : public PassInfoMixin<CombineFunctionsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  explicit CombineFunctionsPass(const std::string &name);
+  explicit CombineFunctionsPass();
   std::string combine_str;
   static bool isRequired() { return true; }
 };

@@ -30,6 +30,7 @@
 #include <cstring>
 #include <iomanip>
 #include <map>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <vcruntime_string.h>
@@ -289,16 +290,32 @@ namespace{
     bool CombineFunction::runOnModule(Module &module) {
         std::vector<Function *> func_list;
         getFunctions(&module, func_list);
-        std::vector<Function *> work_list;
+
+        std::string rgx_str = combine_string+"\\[(.*)\\]";
+        std::regex rgx(rgx_str);
+        std::unordered_map<std::string,std::vector<Function *>> work_map;
+
        // errs() << "Function List:\n";
         for (auto &func : func_list) {
          // errs() << func->getName().str() << "\n";
-          if (std::string::npos!=readAnnotate(func).find(combine_string)) {
+          std::smatch match;
+          std::string ann = readAnnotate(func);
+          if (std::regex_search(ann, match, rgx) && match.size() > 1) {
            // errs() << "		-Add to work list "<<combine_string<<"\n";
-            work_list.push_back(func);
+            std::string tag_name = match.str(1);
+            if(work_map.find(tag_name)!=work_map.end()) {
+              work_map[tag_name].push_back(func);
+            }
+            else {
+                std::vector<Function *> tmp_list{};
+                tmp_list.push_back(func);
+                work_map.emplace(tag_name,tmp_list);
+            }
           }
         }
-        const bool ret = CombineFunctions(module, work_list);
+        bool ret=false;
+        for(auto &[tag_name,work_list]:work_map)
+          ret|= CombineFunctions(module, work_list);
         //errs() << "combine done\n";
         return ret;
     }
@@ -317,6 +334,6 @@ PreservedAnalyses CombineFunctionsPass::run(Module &M, ModuleAnalysisManager &AM
   return PreservedAnalyses::all();
 }
 
-CombineFunctionsPass::CombineFunctionsPass(const std::string &name) {
-  combine_str = name;
+CombineFunctionsPass::CombineFunctionsPass() {
+  combine_str = "combine_func";
 }

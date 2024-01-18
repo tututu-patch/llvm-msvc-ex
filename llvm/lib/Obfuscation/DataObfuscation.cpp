@@ -118,7 +118,7 @@ Value *DataObfuscator::genRandIndex(Instruction *I) {
     genFunc->setAnnotationStrings("x-vm,x-full");
   }
   else {
-    genFunc->setAnnotationStrings("combine0");
+    genFunc->setAnnotationStrings("combine_func[grand]");
   }
   
   BasicBlock *entry = BasicBlock::Create(*CONTEXT, "entry", genFunc);

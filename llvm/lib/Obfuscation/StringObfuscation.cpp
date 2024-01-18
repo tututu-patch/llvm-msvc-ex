@@ -270,7 +270,7 @@ Function *StringEncryption::buildDecryptFunction(
       FuncTy, GlobalValue::PrivateLinkage,
       "goron_decrypt_string_" + Twine::utohexstr(Entry->ID), M);
   
-  DecFunc->setAnnotationStrings("combine1");
+  DecFunc->setAnnotationStrings("combine_func[dec_str]");
 
   auto ArgIt = DecFunc->arg_begin();
   Argument *PlainString = ArgIt; // output

@@ -29,7 +29,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] 添加fla強化 x-fla-enh
 - [x] x-full 功能，在function上使用vm-fla-level=7
 - [x] 字符串加密等相似加了combine
-- [ ] 自定義分割合併 combine_func[tag_number] 模式
+- [x] 自定義分割合併 combine_func[tag_number] 模式
 - [x] x-var-rot 變量旋轉----並不複雜 
 
 
@@ -116,11 +116,11 @@ set /GL off
 set /O2 on
 #### 最大保护（文件将超过100MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh -mllvm -x-var-rot
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -fla -mllvm -sub -mllvm -sub_loop=1 -mllvm -split -mllvm -split_num=3 -mllvm -bcf -mllvm -bcf_loop=1 -mllvm -bcf_prob=40 -mllvm -vm-fla-level=7 -mllvm -x-fla-enh -mllvm -x-var-rot -mllvm -x-combine
 ```
 #### 单纯使用特色部分（轻量模式 不加Light会导致文件飞升到10MB）
 ```
--mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=0 -mllvm -x-fla-enh
+-mllvm -data-obfus -mllvm -const-obfus -mllvm -string-obfus -mllvm -ind-call -mllvm -vm-fla -mllvm -vm-fla-level=0 -mllvm -x-fla-enh -mllvm -x-combine
 ```
 #### 需要修改载研究的部分
 ```
@@ -138,7 +138,7 @@ __attribute((__annotate__(("x-vm,x-full")))) void crypt_func(uint8_t *var,uint8_
 
 #### combine sample
 ```c++
-__attribute((__annotate__(("combine_func")))) int a1(int a, int b)
+__attribute((__annotate__(("combine_func[tag1]")))) int a1(int a, int b)
 {
     printf("%d , %d\r\n", a, b);
     printf("%x\r\n", a ^ b);
@@ -146,7 +146,7 @@ __attribute((__annotate__(("combine_func")))) int a1(int a, int b)
 }
 
 
-__attribute((__annotate__(("combine_func")))) int a2(int a, int b)
+__attribute((__annotate__(("combine_func[tag1]")))) int a2(int a, int b)
 {
     std::cout << "hello1" << std::endl;
     for (auto i = std::min(a, b);i < std::max(a, b);i++)
@@ -159,7 +159,7 @@ __attribute((__annotate__(("combine_func")))) int a2(int a, int b)
 }
 
 
-__attribute((__annotate__(("combine_func")))) int a3(int a,int b)
+__attribute((__annotate__(("combine_func[tag2]")))) int a3(int a,int b)
 {
     printf("%d , %d\r\n", a+1, b+2);
     printf("%x\r\n", a ^ b);
