@@ -1,4 +1,4 @@
-name: llvm-msvc-build
+name: linux-llvm-msvc-build
 
 on: [push, pull_request]
 
@@ -8,11 +8,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
     env:
       BUILD_TYPE: Release
     steps:
-    
+
+    - name: Setup build deps
+      run: |
+          sudo wget -qO /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip \
+          && sudo gunzip /usr/local/bin/ninja.gz \
+          && sudo chmod a+x /usr/local/bin/ninja \
+          && sudo apt-get install build-essential make cmake \
+          && sudo apt-get install p7zip-full p7zip-rar
+          
     - name: Checkout Repo
       uses: actions/checkout@v3
       with:
@@ -21,7 +29,18 @@ jobs:
           
     - name: Build llvm
       run: |
-        cmake -Bbuild -A X64 -DLLDB_ENABLE_PYTHON=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DCMAKE_BUILD_TYPE=release -DLLVM_USE_CRT_RELEASE=MT -DCPACK_GENERATOR=ZIP -DCMAKE_INSTALL_PREFIX="$pwd\\prefix" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_OBFUSCATION_LINK_INTO_TOOLS=ON -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" llvm-msvc\\llvm
+        cmake -G "Ninja" -Bbuild \
+        -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLDB_ENABLE_PYTHON=OFF \
+        -DLLVM_ENABLE_LIBXML2=OFF \
+        -DLLVM_ENABLE_ZLIB=OFF \
+        -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+        -DCPACK_GENERATOR=ZIP \
+        -DCMAKE_INSTALL_PREFIX="$pwd/prefix" \
+        -DLLVM_TARGETS_TO_BUILD="X86;ARM;AArch64" \
+        -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+        llvm-msvc/llvm
         cmake --build build --config ${{ env.BUILD_TYPE }}
 
     - name: Package llvm

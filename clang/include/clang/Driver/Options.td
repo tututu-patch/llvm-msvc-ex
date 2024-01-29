@@ -2431,6 +2431,14 @@ defm sanitize_cfi_cross_dso : BoolOption<"f", "sanitize-cfi-cross-dso",
           "Disable">,
   BothFlags<[], [ClangOption], " control flow integrity (CFI) checks for cross-DSO calls.">>,
   Group<f_clang_Group>;
+def fdisable_cfi_check_fail : Flag<["-"], "fdisable-cfi-check-fail">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Disables the failure checks in CFI">,
+                                          MarshallingInfoFlag<CodeGenOpts<"DisableCFICheckFail">>;
+def fdisable_cfi_slow_path_check : Flag<["-"], "fdisable-cfi-slow-path-check">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Disables the slow path checks in CFI">,
+                                          MarshallingInfoFlag<CodeGenOpts<"DisableCFISlowPathCheck">>;
 def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
                                               Group<f_clang_Group>,
                                               HelpText<"Generalize pointers in CFI indirect call type signature checks">,
@@ -3670,6 +3678,9 @@ def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_G
   NormalizedValuesScope<"LangOptions::TrivialAutoVarInitKind">,
   NormalizedValues<["Uninitialized", "Zero", "Pattern"]>,
   MarshallingInfoEnum<LangOpts<"TrivialAutoVarInit">, "Uninitialized">;
+def enable_trivial_var_init_zero : Joined<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  HelpText<"Trivial automatic variable initialization to zero is only here for benchmarks, it'll eventually be removed, and I'm OK with that because I'm only using it to benchmark">;
 def ftrivial_auto_var_init_stop_after : Joined<["-"], "ftrivial-auto-var-init-stop-after=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">,

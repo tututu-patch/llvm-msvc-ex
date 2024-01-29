@@ -176,7 +176,7 @@ __attribute((__annotate__(("combine_func[tag2]")))) int a3(int a,int b)
 If you don't know how to learn ``LLVM``, you can check out this [repository](https://github.com/gmh5225/awesome-llvm-security) of mine.
 
 ### Can it run on linux?
-No.
+Yes.
 
 ### Can it run on macos?
 No.

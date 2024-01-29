@@ -258,12 +258,9 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
                               bool LogOnly) {
 #ifdef _WIN32
   bool SupportMP = MPCoresNumber > 1;
-#else
-  bool SupportMP = false;
-#endif
-
   if (SupportMP)
     return ExecuteJobsMP(const_cast<JobList &>(Jobs), FailingCommands, LogOnly);
+#endif
   return ExecuteJobsSingle(Jobs, FailingCommands, LogOnly);
 }
 
@@ -302,6 +299,7 @@ int Compilation::ExecuteJob(const Command &Job,
 void Compilation::ExecuteJobsMP(JobList &Jobs,
                                 FailingCommandList &FailingCommands,
                                 bool LogOnly) {
+#ifdef _WIN32
   // Count the number of PCH (precompiled header) jobs.
   int PCHCount = 0;
   for (auto &Job : Jobs) {
@@ -430,6 +428,7 @@ void Compilation::ExecuteJobsMP(JobList &Jobs,
       return;
     }
   }
+#endif
 }
 
 void Compilation::initCompilationForDiagnostics() {
