@@ -607,18 +607,18 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 //   . => _
 
 // Developer Driver Options
-def ftreat_warnings_as_errors : Flag<["-"], "ftreat-warnings-as-errors">, Group<f_Group>, Visibility<[CC1Option, CLOption]>,
+def ftreat_warnings_as_errors : Flag<["-"], "ftreat-warnings-as-errors">, Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Treat warnings as errors">,
   MarshallingInfoFlag<CodeGenOpts<"TreatWarningsAsErrors">>;
-def fprint_arguments : Flag<["-"], "fprint-arguments">, Group<f_Group>, Visibility<[CC1Option, CLOption]>,
+def fprint_arguments : Flag<["-"], "fprint-arguments">, Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print clang arguments">;
-def fencrypt_string : Flag<["-"], "fencrypt-string">, Group<f_Group>, Visibility<[CC1Option, CLOption]>,
+def fencrypt_string : Flag<["-"], "fencrypt-string">, Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Encrypt your strings">,
   MarshallingInfoFlag<CodeGenOpts<"EncryptString">>;
-def fauto_generate_bitcode : Flag<["-"], "fauto-generate-bitcode">, Group<f_Group>, Visibility<[CC1Option, CLOption]>,
+def fauto_generate_bitcode : Flag<["-"], "fauto-generate-bitcode">, Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Automatically generate bitcode">,
   MarshallingInfoFlag<CodeGenOpts<"AutoGenerateBitcode">>;
-def fauto_generate_ir : Flag<["-"], "fauto-generate-ir">, Group<f_Group>, Visibility<[CC1Option, CLOption]>,
+def fauto_generate_ir : Flag<["-"], "fauto-generate-ir">, Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Automatically generate ir">,
   MarshallingInfoFlag<CodeGenOpts<"AutoGenerateIR">>;
 
@@ -2973,7 +2973,7 @@ def fms_kernel : Flag<["-"], "fms-kernel">, Group<f_Group>,
 // been rewritten in terms of something more generic, remove the Opts.CUDA
 // term here.
 defm declspec : BoolOption<"f", "declspec",
-  LangOpts<"DeclSpecKeyword">, DefaultFalse,
+  LangOpts<"DeclSpecKeyword">, DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Allow", [fms_extensions.KeyPath, fborland_extensions.KeyPath, cuda.KeyPath]>,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option],
