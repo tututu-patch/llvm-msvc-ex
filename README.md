@@ -1,6 +1,7 @@
 # `llvm-msvc`
 
 
+
 ### add Something for ollvm
 ```
 Original obfuscation passes including bogus control flow (-bcf), split basic block (-split), control flow flattening (-fla) and substitution (-sub) and MBA-substitution(-mba-subs) and Indirect-Call(-ind-call) and StringXor(-string-obfus) and ConstVarXor(-const-obfus) and VM-Flattening (-vm-fla).
@@ -33,9 +34,12 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] x-var-rot 變量旋轉----並不複雜 
 
 
-[![llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/llvm-msvc-build.yml)
-[![GitHub license](https://img.shields.io/github/license/backengineering/llvm-msvc)](https://github.com/backengineering/llvm-msvc/blob/main/LICENSE)
+=======
+[![windows-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml)
+[![android-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml)
 
+
+[![GitHub license](https://img.shields.io/github/license/backengineering/llvm-msvc)](https://github.com/backengineering/llvm-msvc/blob/main/LICENSE)
 [![Github All Releases](https://img.shields.io/github/downloads/backengineering/llvm-msvc/total.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 [![GitHub release](https://img.shields.io/github/release/backengineering/llvm-msvc.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 
