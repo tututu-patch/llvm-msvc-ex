@@ -1,26 +1,20 @@
-name: linux-llvm-msvc-build
+name: windows-llvm-msvc-build
 
 on: [push, pull_request]
 
 jobs:
   build:
+    # Skip building pull requests from the same repository
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [windows-latest]
     env:
       BUILD_TYPE: Release
     steps:
-
-    - name: Setup build deps
-      run: |
-          sudo wget -qO /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip \
-          && sudo gunzip /usr/local/bin/ninja.gz \
-          && sudo chmod a+x /usr/local/bin/ninja \
-          && sudo apt-get install build-essential make cmake \
-          && sudo apt-get install p7zip-full p7zip-rar
-          
+    
     - name: Checkout Repo
       uses: actions/checkout@v3
       with:
@@ -29,19 +23,7 @@ jobs:
           
     - name: Build llvm
       run: |
-        cmake -G "Ninja" -Bbuild \
-        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
-        -DLLVM_INCLUDE_TESTS=OFF \
-        -DLLVM_INCLUDE_EXAMPLES=OFF \
-        -DLLDB_ENABLE_PYTHON=OFF \
-        -DLLVM_ENABLE_LIBXML2=OFF \
-        -DLLVM_ENABLE_ZLIB=OFF \
-        -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-        -DCPACK_GENERATOR=ZIP \
-        -DCMAKE_INSTALL_PREFIX="$pwd/prefix" \
-        -DLLVM_TARGETS_TO_BUILD="X86;ARM;AArch64" \
-        -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
-        llvm-msvc/llvm
+        cmake -Bbuild -A X64 -DLLDB_ENABLE_PYTHON=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DCMAKE_BUILD_TYPE=release -DLLVM_USE_CRT_RELEASE=MT -DCPACK_GENERATOR=ZIP -DCMAKE_INSTALL_PREFIX="$pwd\\prefix" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_OBFUSCATION_LINK_INTO_TOOLS=ON -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" llvm-msvc\\llvm
         cmake --build build --config ${{ env.BUILD_TYPE }}
 
     - name: Package llvm
