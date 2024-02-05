@@ -21,8 +21,8 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 ### 计划
 - [x] 在vm-fla-sym添加反符号执行和反内存追踪
 - [x] vm-fla-enc 对vm-fla的部分数据加密
-- [ ] MBA-subs的bug
-- [ ] 移植xVMP
+- ~~[ ] MBA-subs的bug~~
+- ~~[ ] 移植xVMP~~
 - [x] 在vm-fla-enc中使用间接全局变量访问
 - [x] vm-fla-level 0~7 8个处理等级 7最强，0最弱，默认7
 - [x] 弱鸡vmp加入 
@@ -33,8 +33,6 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] 自定義分割合併 combine_func[tag_number] 模式
 - [x] x-var-rot 變量旋轉----並不複雜 
 
-
-=======
 [![windows-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml)
 [![android-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml)
 
