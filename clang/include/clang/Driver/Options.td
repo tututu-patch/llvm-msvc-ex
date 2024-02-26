@@ -2431,6 +2431,14 @@ defm sanitize_cfi_cross_dso : BoolOption<"f", "sanitize-cfi-cross-dso",
           "Disable">,
   BothFlags<[], [ClangOption], " control flow integrity (CFI) checks for cross-DSO calls.">>,
   Group<f_clang_Group>;
+def fjumptable_rdata : Flag<["-"], "fjumptable-rdata">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Put switch case jump tables in .rdata">,
+                                          MarshallingInfoFlag<CodeGenOpts<"Jumptablerdata">>;
+def fdisable_cfi_check : Flag<["-"], "fdisable-cfi-check">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Disables the checks in CFI">,
+                                          MarshallingInfoFlag<CodeGenOpts<"DisableCFICheck">>;
 def fdisable_cfi_check_fail : Flag<["-"], "fdisable-cfi-check-fail">,
                                           Group<f_clang_Group>,
                                           HelpText<"Disables the failure checks in CFI">,
@@ -2439,6 +2447,9 @@ def fdisable_cfi_slow_path_check : Flag<["-"], "fdisable-cfi-slow-path-check">,
                                           Group<f_clang_Group>,
                                           HelpText<"Disables the slow path checks in CFI">,
                                           MarshallingInfoFlag<CodeGenOpts<"DisableCFISlowPathCheck">>;
+def fandroid_kernel_driver_mode : Flag<["-"], "fandroid-kernel-driver-mode">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Android kernel driver development mode">;
 def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
                                               Group<f_clang_Group>,
                                               HelpText<"Generalize pointers in CFI indirect call type signature checks">,
@@ -8163,6 +8174,7 @@ def : CLFlag<"Qgather-">, Alias<mno_gather>,
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
       HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def _SLASH_GL : CLFlag<"GL">, HelpText<"Whole Program Optimization">, Alias<flto_EQ>, AliasArgs<["full"]>;
+def _SLASH_jumptablerdata : CLFlag<"jumptablerdata">, HelpText<"Put switch case jump tables in .rdata">, Alias<fjumptable_rdata>;
 
 // Non-aliases:
 

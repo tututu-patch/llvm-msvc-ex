@@ -36,8 +36,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 [![windows-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml)
 [![android-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml)
 
-
-[![GitHub license](https://img.shields.io/github/license/backengineering/llvm-msvc)](https://github.com/backengineering/llvm-msvc/blob/main/LICENSE)
+![image](https://github.com/backengineering/llvm-msvc/assets/13917777/86a7eb6a-466a-4290-8ec5-e3affc3e3c0a)
 [![Github All Releases](https://img.shields.io/github/downloads/backengineering/llvm-msvc/total.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 [![GitHub release](https://img.shields.io/github/release/backengineering/llvm-msvc.svg)](https://github.com/backengineering/llvm-msvc/releases) 
 
@@ -72,6 +71,7 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - Improved ``SEH`` stability.
 - Added some special Intrinsic functions(``__vmx_vmread``/``__vmx_write``).
 - Supports ``x64``/``ARM64`` windows drivers.
+- Supports ``AArch64`` android GKI drivers.
 - Allows naked ``X64`` inline asm.
 - Enables multiple cores compilation.
 - Supports ``/MP`` when precompiled headers are present.

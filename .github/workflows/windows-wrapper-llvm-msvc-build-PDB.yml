@@ -1,4 +1,4 @@
-name: windows-llvm-msvc-build
+name: windows-wrapper-llvm-msvc-build-PDB
 
 permissions:
   contents: write
@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [windows-latest]
     env:
-      BUILD_TYPE: Release
+      BUILD_TYPE: RelWithDebInfo
     steps:
     
     - name: Checkout Repo
@@ -26,26 +26,38 @@ jobs:
           
     - name: Build llvm
       run: |
-        cmake -Bbuild -A X64 -DLLDB_ENABLE_PYTHON=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DLLVM_USE_CRT_RELEASE=MT -DCPACK_GENERATOR=ZIP -DCMAKE_INSTALL_PREFIX=install -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_OBFUSCATION_LINK_INTO_TOOLS=ON -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" llvm-msvc\\llvm
+        cmake -Bbuild `
+        -DLLVM_ENABLE_PACK_PDB=ON `
+        -DLLVM_INCLUDE_TESTS=OFF `
+        -DLLVM_INCLUDE_EXAMPLES=OFF `
+        -DLLDB_ENABLE_PYTHON=OFF `
+        -DLLVM_ENABLE_LIBXML2=OFF `
+        -DLLVM_ENABLE_ZLIB=OFF `
+        -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+        -DLLVM_USE_CRT_RELEASE=MT `
+        -DCMAKE_INSTALL_PREFIX=install `
+        -DLLVM_TARGETS_TO_BUILD="X86;AArch64" `
+        -DLLVM_ENABLE_PROJECTS="clang;lld" `
+        llvm-msvc\\llvm
         cmake --build build --config ${{ env.BUILD_TYPE }}
         cmake --build build --config ${{ env.BUILD_TYPE }} --target install
-
+        
     - name: Package llvm
       run: |
-        7z a -v1500m windows-llvm-msvc.zip install
+        7z a -v1500m windows-wrapper-llvm-msvc-PDB.zip install
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v2
       with:
-        name: windows-llvm-msvc
-        path: windows-llvm-msvc.zip.00*
+        name: windows-wrapper-llvm-msvc-PDB
+        path: windows-wrapper-llvm-msvc-PDB.zip.00*
         
     - name: Release
       uses: softprops/action-gh-release@v1
       if: ${{ startsWith(github.ref, 'refs/tags/') }}
       with:
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') || contains(github.ref, '-pre') }}
-        files: windows-llvm-msvc.zip.00*
+        files: windows-wrapper-llvm-msvc-PDB.zip.00*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
