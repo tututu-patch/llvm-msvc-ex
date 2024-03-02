@@ -25,7 +25,7 @@ jobs:
           && sudo chmod a+x /usr/local/bin/ninja \
           && sudo apt-get install build-essential make cmake \
           && sudo apt-get install p7zip-full p7zip-rar \
-          && sudo apt-get install g++-11-aarch64-linux-gnu libstdc++-11-dev-arm64-cross gcc-11 g++-11
+          && sudo apt-get install libstdc++-11-dev-arm64-cross gcc-11 g++-11
           
     - name: Checkout Repo
       uses: actions/checkout@v3
@@ -79,7 +79,7 @@ jobs:
         cmake -GNinja -Bcompiler-rt-build \
         -DCMAKE_INSTALL_PREFIX=install \
         -DCOMPILER_RT_BUILD_BUILTINS=ON \
-        -DCOMPILER_RT_BUILD_LIBFUZZER=ON \
+        -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
         -DCOMPILER_RT_BUILD_MEMPROF=ON \
         -DCOMPILER_RT_BUILD_PROFILE=ON \
         -DCOMPILER_RT_BUILD_SANITIZERS=ON \
