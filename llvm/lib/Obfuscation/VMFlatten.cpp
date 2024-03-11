@@ -31,7 +31,9 @@
 #include <map>
 #include <set>
 #include <sstream>
+#ifdef _MSC_VER
 #include <vcruntime_string.h>
+#endif
 #include <vector>
 
 // #define RUN_BLOCK 1
