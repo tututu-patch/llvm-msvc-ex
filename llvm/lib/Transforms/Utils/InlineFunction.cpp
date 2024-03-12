@@ -2015,6 +2015,35 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   }
 }
 
+// Set volatile attribute for inlined basic block and instructions.
+// This is used to preserve the volatile attribute of the original call instruction.
+static void setVolatileForInlinedBB(BasicBlock *BB) {
+  
+  // Do not set volatile attribute for basic block with only one instruction.
+  if (BB->size() <= 1)
+    return;
+
+  // Filter out BBs that contain EH pad.
+  if (BB->isEHPad())
+	  return;
+
+  // Set volatile attribute for all instructions in the basic block.
+  for (auto &I : *BB) {
+    if (I.isTerminator())
+      continue;
+    if (I.isPHINodeOrSelectInstOrSwitchInst()) 
+      continue;
+    if (isa<IntrinsicInst>(&I))
+      continue;
+    if (isa<InvokeInst>(&I))
+      continue;
+    I.setVolatile(true);
+  }
+
+  // Set volatile attribute for the basic block.
+  BB->setVolatile(true);
+}
+
 /// This function inlines the called function into the basic block of the
 /// caller. This returns false if it is not possible to inline this call.
 /// The program is still in a well defined state if this occurs though.
@@ -2803,18 +2832,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 #ifdef _WIN32
     // Set 'volatile' to the new BB and instructions.
-    OrigBB->setVolatile(true);
-    for (auto &I : *OrigBB) {
-      if (I.isEHPad())
-        continue;
-      if (I.isPHINodeOrSelectInstOrSwitchInst())
-        continue;
-      if (isa<InvokeInst>(&I))
-        continue;
-      if (isa<IntrinsicInst>(&I))
-        continue;
-      I.setVolatile(true);
-    }
+    setVolatileForInlinedBB(OrigBB);
 #endif
     // We are now done with the inlining.
     return InlineResult::success();
@@ -2981,18 +2999,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 #ifdef _WIN32
   // Set 'volatile' to the new BB and instructions.
-  AfterCallBB->setVolatile(true);
-  for (auto &I : *AfterCallBB) {
-    if (I.isEHPad())
-      continue;
-    if (I.isPHINodeOrSelectInstOrSwitchInst())
-      continue;
-    if (isa<InvokeInst>(&I))
-      continue;
-    if (isa<IntrinsicInst>(&I))
-      continue;
-    I.setVolatile(true);
-  }
+  setVolatileForInlinedBB(AfterCallBB);
 #endif
   return InlineResult::success();
 }

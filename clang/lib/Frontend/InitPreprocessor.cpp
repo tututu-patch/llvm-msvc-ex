@@ -464,6 +464,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
         Builder.defineMacro("__cplusplus", "201703L");
       else if (LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
         Builder.defineMacro("__cplusplus", "201402L");
+      else 
+        Builder.defineMacro("__cplusplus", "201703L");
     }
     //      [C++14] The name __cplusplus is defined to the value 201402L when
     //      compiling a C++ translation unit.
@@ -1354,8 +1356,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   }
 
   // ELF targets define __ELF__
-  if (TI.getTriple().isOSBinFormatELF())
+  if (TI.getTriple().isOSBinFormatELF()) {
     Builder.defineMacro("__ELF__");
+    Builder.defineMacro("__LLVM_MSVC__ELF__");
+  }
 
 #ifdef _WIN32
   // PE targets define __LLVM_MSVC__PE__
