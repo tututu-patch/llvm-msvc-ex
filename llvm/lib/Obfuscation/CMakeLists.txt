@@ -20,6 +20,7 @@ add_llvm_pass_plugin(Obfuscation
   CombineFunctions.cpp
   FlatteningEnhanced.cpp
   VariableRotation.cpp
+  Linearize.cpp
   Plugin.cpp
 
   ADDITIONAL_HEADER_DIRS

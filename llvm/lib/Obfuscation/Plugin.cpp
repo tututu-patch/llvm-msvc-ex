@@ -14,6 +14,7 @@
 #include "CombineFunctions.h"
 #include "FlatteningEnhanced.h"
 #include "VariableRotation.h"
+#include "Linearize.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -51,6 +52,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(createModuleToFunctionPassAdaptor(IndirectCallPass()));
           MPM.addPass(IngvObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
+          MPM.addPass(Linearize());
         });
         //PB.registerVectorizerStartEPCallback(
         //    [](FunctionPassManager &FPM, OptimizationLevel Level) {});
