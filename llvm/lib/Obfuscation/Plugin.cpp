@@ -26,6 +26,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
       [](PassBuilder &PB) {
         PB.registerPipelineStartEPCallback([](llvm::ModulePassManager &MPM,
                                               OptimizationLevel Level) {
+
           MPM.addPass(createModuleToFunctionPassAdaptor(SplitBasicBlockPass()));
           MPM.addPass(
               createModuleToFunctionPassAdaptor(BogusControlFlowPass()));
@@ -42,6 +43,8 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(CombineFunctionsPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningEnhanced()));
           MPM.addPass(VariableRotationPass());
+          
+          
         });
 
         PB.registerOptimizerLastEPCallback([](llvm::ModulePassManager &MPM,
@@ -53,6 +56,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(IngvObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
           MPM.addPass(Linearize());
+          
         });
         //PB.registerVectorizerStartEPCallback(
         //    [](FunctionPassManager &FPM, OptimizationLevel Level) {});

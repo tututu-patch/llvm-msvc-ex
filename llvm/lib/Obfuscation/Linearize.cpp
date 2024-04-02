@@ -121,15 +121,15 @@ void LinearizeX::handleIntrinsics(BasicBlock &BB) {
   for (CallInst *ci : intrins) {
     Intrinsic::ID id = ci->getIntrinsicID();
     AttributeList al = Intrinsic::getAttributes(BB.getContext(), id);
-    if (!Intrinsic::isOverloaded(id))
-      dbgs() << "Intrinsic " << Intrinsic::getName(id) << " has Attribtues:\n";
-    else
-      dbgs() << "Intrinsic " << Intrinsic::getBaseName(id)
-             << " has Attribtues:\n";
-    al.print(dbgs());
+    // if (!Intrinsic::isOverloaded(id))
+    //   //dbgs() << "Intrinsic " << Intrinsic::getName(id) << " has Attribtues:\n";
+    // else
+    //   //dbgs() << "Intrinsic " << Intrinsic::getBaseName(id)
+    //          << " has Attribtues:\n";
+    // al.print(//dbgs());
 
     if (ci->doesNotAccessMemory() && al.hasFnAttr(Attribute::WillReturn)) {
-      dbgs() << "Ignoring due to readnone\n";
+      //dbgs() << "Ignoring due to readnone\n";
       continue;
     }
 
@@ -139,9 +139,9 @@ void LinearizeX::handleIntrinsics(BasicBlock &BB) {
       continue;
     }
 
-    errs() << "no replacement function found for\n";
-    ci->print(errs());
-    errs() << "\n";
+    //errs() << "no replacement function found for\n";
+    //ci->print(errs());
+    //errs() << "\n";
     llvm_unreachable("no intrinsic translation");
   }
 }
@@ -167,9 +167,9 @@ void LinearizeX::resolveContinuityErrors(Function &F) {
   std::unordered_map<BasicBlock *, LoadInst *> bbLoadMap;
   bbLoadMap.reserve(100);
   for (Instruction *ins : tofix) {
-    dbgs() << "fixing ";
-    ins->print(dbgs());
-    dbgs() << "\n";
+    //dbgs() << "fixing ";
+    //ins->print(//dbgs());
+    //dbgs() << "\n";
     Type *ty = ins->getType();
     BasicBlock *home = ins->getParent();
     AllocaInst *alloc =
@@ -189,19 +189,19 @@ void LinearizeX::resolveContinuityErrors(Function &F) {
 
     for (Use *u : uses) {
       Instruction *uins = cast<Instruction>(u->getUser());
-      dbgs() << "rewriting use ";
-      uins->print(dbgs());
+      //dbgs() << "rewriting use ";
+      //uins->print(//dbgs());
       LoadInst *load = nullptr;
       BasicBlock *bb = uins->getParent();
       auto it = bbLoadMap.find(bb);
       if (it != bbLoadMap.end()) {
         load = it->second;
-        dbgs() << "in " << bb->getName() << " (shared)\n";
+        //dbgs() << "in " << bb->getName() << " (shared)\n";
       } else {
         load = new LoadInst(ty, alloc, Twine(ins->getName(), ".ins.use"),
                             cast<Instruction>(bb->getFirstNonPHIOrDbg()));
         bbLoadMap.emplace(bb, load);
-        dbgs() << "in " << bb->getName() << " (fresh)\n";
+        //dbgs() << "in " << bb->getName() << " (fresh)\n";
       }
       assert(load != nullptr);
       u->set(load);
@@ -230,9 +230,9 @@ void LinearizeX::eliminatePhis(Function &F) {
   bbLoadMap.reserve(100);
   for (PHINode *phi : phis) {
     Type *ty = phi->getType();
-    dbgs() << "rewriting ";
-    phi->print(dbgs());
-    dbgs() << "\n";
+    //dbgs() << "rewriting ";
+    //phi->print(//dbgs());
+    //dbgs() << "\n";
     AllocaInst *alloc =
         new AllocaInst(ty, 0, Twine(phi->getName(), ".phi.rewrite"), first_ins);
     for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
@@ -273,7 +273,7 @@ void LinearizeX::shuffleBlocks(Function &F, size_t numlbl) {
   fallthroughs.reserve(F.size() - numlbl);
   BasicBlock *last = nullptr;
 
-  dbgs() << "shuffling\n";
+  //dbgs() << "shuffling\n";
 
   for (auto it = ++F.begin(); it != F.end(); ++it) {
     if (labels.at(&*it).kind == LBL_FRESH) {
@@ -284,7 +284,7 @@ void LinearizeX::shuffleBlocks(Function &F, size_t numlbl) {
     last = &*it;
   }
 
-  dbgs() << "shuffled\n";
+  ////dbgs() << "shuffled\n";
 
   BasicBlock *ip = &*--F.end();
   for (BasicBlock *bb : bbs) {
@@ -308,7 +308,7 @@ size_t LinearizeX::getLabels(Function &F) {
   for (; it != F.end(); ++it) {
     BasicBlock *bb = &*it;
     if (first) {
-      dbgs() << bb->getName() << ": fresh\n";
+      //////dbgs() << bb->getName() << ": fresh\n";
       labels[bb] = label{LBL_FRESH, (*rng)()};
       last = bb;
       first = false;
@@ -317,13 +317,13 @@ size_t LinearizeX::getLabels(Function &F) {
     }
 
     if (last == bb->getUniquePredecessor()) {
-      dbgs() << bb->getName() << ": fallthrough\n";
+      ////dbgs() << bb->getName() << ": fallthrough\n";
       labels[bb] = label{LBL_FALLTHROUGH};
       last = bb;
       continue;
     }
 
-    dbgs() << bb->getName() << ": fresh\n";
+    ////dbgs() << bb->getName() << ": fresh\n";
     labels[bb] = label{LBL_FRESH, (*rng)()};
     last = bb;
     ++numlbl;
@@ -430,9 +430,9 @@ Value *LinearizeX::prepareBlock(BasicBlock &bb, Value *on, AllocaInst *selector,
     // TODO elaborate intrinsic handling
     CallInst *ci = dyn_cast<CallInst>(&ins);
     if (ci && ci->getIntrinsicID() == Intrinsic::not_intrinsic) {
-      dbgs() << "removing addtributes from:";
-      ci->print(dbgs());
-      dbgs() << "\n";
+      //dbgs() << "removing addtributes from:";
+      //ci->print(//dbgs());
+      //dbgs() << "\n";
       ci->setAttributes(
           AttributeList::get(ci->getContext(), ArrayRef<AttributeList>()));
     }
@@ -514,8 +514,8 @@ LinearizeX::getDiscardSizeAlign(Function &F, const DataLayout &DataLayout) {
     for (Instruction &ins : bb) {
       StoreInst *si = dyn_cast<StoreInst>(&ins);
       if (si) {
-        si->print(dbgs());
-        dbgs() << "\n";
+        //si->print(//dbgs());
+        //dbgs() << "\n";
         Type *t = si->getValueOperand()->getType();
         size_t tmp = DataLayout.getTypeAllocSize(t);
         Align tmpalign =
@@ -529,8 +529,8 @@ LinearizeX::getDiscardSizeAlign(Function &F, const DataLayout &DataLayout) {
 
       LoadInst *li = dyn_cast<LoadInst>(&ins);
       if (li) {
-        li->print(dbgs());
-        dbgs() << "\n";
+        //li->print(//dbgs());
+        //dbgs() << "\n";
         size_t tmp = DataLayout.getTypeAllocSize(li->getType());
         Align tmpalign = DataLayout.getValueOrABITypeAlignment(li->getAlign(),
                                                                li->getType());
@@ -543,8 +543,8 @@ LinearizeX::getDiscardSizeAlign(Function &F, const DataLayout &DataLayout) {
 
       AtomicCmpXchgInst *cmpXchg = dyn_cast<AtomicCmpXchgInst>(&ins);
       if (cmpXchg) {
-        cmpXchg->print(dbgs());
-        dbgs() << "\n";
+        //cmpXchg->print(//dbgs());
+        //dbgs() << "\n";
         Type *t = cmpXchg->getNewValOperand()->getType();
         size_t tmp = DataLayout.getTypeAllocSize(t);
         Align tmpalign =
@@ -558,8 +558,8 @@ LinearizeX::getDiscardSizeAlign(Function &F, const DataLayout &DataLayout) {
 
       AtomicRMWInst *rmw = dyn_cast<AtomicRMWInst>(&ins);
       if (rmw) {
-        rmw->print(dbgs());
-        dbgs() << "\n";
+        //rmw->print(//dbgs());
+        //dbgs() << "\n";
         size_t tmp = DataLayout.getTypeAllocSize(rmw->getType());
         Align tmpalign = DataLayout.getValueOrABITypeAlignment(rmw->getAlign(),
                                                                rmw->getType());
@@ -575,7 +575,7 @@ LinearizeX::getDiscardSizeAlign(Function &F, const DataLayout &DataLayout) {
 }
 
 bool LinearizeX::runOnFunction(Function &F) {
-  dbgs() << "linearizing " << F.getName() << "\n";
+  //dbgs() << "linearizing " << F.getName() << "\n";
   labels.clear();
 
   auto it = F.getEntryBlock().begin();
@@ -591,8 +591,8 @@ bool LinearizeX::runOnFunction(Function &F) {
   for (BasicBlock &bb : F) {
     Instruction *ins = bb.getTerminator();
     if (!isa<BranchInst>(ins) && !isa<ReturnInst>(ins)) {
-      dbgs() << "incompatible terminator: ";
-      ins->print(dbgs());
+      //dbgs() << "incompatible terminator: ";
+      //ins->print(//dbgs());
       return false;
     }
   }
@@ -600,7 +600,7 @@ bool LinearizeX::runOnFunction(Function &F) {
   // search for allocas within the function body
   for (auto it2 = it; it2 != F.getEntryBlock().end(); ++it2) {
     if (isa<AllocaInst>(&*it2)) {
-      dbgs() << "found alloca within function body, aborting\n";
+      //dbgs() << "found alloca within function body, aborting\n";
       return false;
     }
   }
@@ -608,7 +608,7 @@ bool LinearizeX::runOnFunction(Function &F) {
   for (auto it = ++F.begin(); it != F.end(); ++it) {
     for (Instruction &ins : *it) {
       if (isa<AllocaInst>(&ins)) {
-        dbgs() << "found alloca within function body, aborting\n";
+        //dbgs() << "found alloca within function body, aborting\n";
         return false;
       }
     }
@@ -641,8 +641,8 @@ bool LinearizeX::runOnFunction(Function &F) {
 
   SplitBlock(&F.getEntryBlock(), split);
 
-  //	F.print(dbgs());
-  //	dbgs() << "\n";
+  //	F.print(//dbgs());
+  //	//dbgs() << "\n";
 
   size_t numlbl = getLabels(F);
 
@@ -651,14 +651,14 @@ bool LinearizeX::runOnFunction(Function &F) {
 
   resolveContinuityErrors(F);
 
-  //	F.print(dbgs());
-  //	dbgs() << "\n";
+  //	F.print(//dbgs());
+  //	//dbgs() << "\n";
 
   size_t finlbl = (*rng)();
   Value *on = nullptr;
   for (auto bbit = ++F.begin(); bbit != F.end(); ++bbit) {
     on = prepareBlock(*bbit, on, selector, labels[&*bbit], discard);
-    dbgs() << "fixing continuation in " << bbit->getName() << "\n";
+    //dbgs() << "fixing continuation in " << bbit->getName() << "\n";
     BranchInst *br = dyn_cast<BranchInst>(bbit->getTerminator());
     IRBuilder<> Builder(bbit->getTerminator());
     if (br) {
@@ -721,7 +721,7 @@ bool LinearizeX::runOnFunction(Function &F) {
       continue;
     }
 
-    dbgs() << "rewriting return instruction\n";
+    //dbgs() << "rewriting return instruction\n";
     ReturnInst *ret = cast<ReturnInst>(bbit->getTerminator());
     Value *rv = ret->getReturnValue();
     if (rv) {
@@ -762,8 +762,8 @@ bool LinearizeX::runOnFunction(Function &F) {
         continue;
       }
 
-      dbgs() << "merging fallthrough " << it->getName() << " into "
-             << last->getName() << "\n";
+      //dbgs() << "merging fallthrough " << it->getName() << " into "
+      //       << last->getName() << "\n";
 
       // merge bb
       last->getTerminator()->eraseFromParent();
@@ -814,12 +814,12 @@ bool LinearizeX::runOnFunction(Function &F) {
     // don't need or want this hardening you can simply merge all basic blocks
     // with the code above
     while (num_inst) {
-      //			dbgs() << "instructions left: " << num_inst <<
+      //			//dbgs() << "instructions left: " << num_inst <<
       //"\n";
       auto it = bblist.begin();
       size_t pos = (*rng)() % num_inst;
       while (pos > (*it)->size()) {
-        //				dbgs() << "instructions left (" <<
+        //				//dbgs() << "instructions left (" <<
         //(*it)->getName() << "): " << (*it)->size() << "\n";
         pos -= (*it)->size();
         ++it;
@@ -833,7 +833,7 @@ bool LinearizeX::runOnFunction(Function &F) {
 
       size_t left = (*it)->size();
       size_t num = std::min(left, 3 + (*rng)() % 3);
-      //			dbgs() << "taking " << num << " instructions
+      //			//dbgs() << "taking " << num << " instructions
       //from " << (*it)->getName() << "\n";
       auto ei = (*it)->begin();
       for (size_t i = 0; i < num; ++i) {
@@ -844,7 +844,7 @@ bool LinearizeX::runOnFunction(Function &F) {
       tar->splice(tar->end(), *it, (*it)->begin(), ei);
       num_inst -= num;
       if (num == left) {
-        //				dbgs() << "block " << (*it)->size() << "
+        //				//dbgs() << "block " << (*it)->size() << "
         //is depelted - erasing\n";
         BasicBlock *todel = *it;
         bblist.erase(it);
@@ -861,17 +861,18 @@ bool LinearizeX::runOnFunction(Function &F) {
         commonFin, tar);
   }
 
-  F.print(dbgs());
-  dbgs() << "\n";
+  //F.print(//dbgs());
+  //dbgs() << "\n";
 
   return true;
 }
 
 PreservedAnalyses Linearize::run(Module &M, ModuleAnalysisManager &MAM) {
 
-  errs()<<"Linear\n";
+  //errs()<<"Linear\n";
 
   if (!RunLinear) {
+    //errs()<<"no linear set\n";
     return PreservedAnalyses::all();
   }
 
@@ -886,10 +887,12 @@ PreservedAnalyses Linearize::run(Module &M, ModuleAnalysisManager &MAM) {
   x.NopFun->setVisibility(GlobalValue::HiddenVisibility);
 
   for (Function &F : M) {
-    if (F.isDeclaration() || F.hasOptNone() || F.isVarArg())
+    
+    if (F.isDeclaration() || F.isVarArg())
       continue;
-
-    errs()<<"Linear One\n";
+    if(F.getName().starts_with("??") || F.getName().contains("std@")) 
+      continue;
+    errs()<<"Linear One: func = "<<F.getName().str()<<"\n";
     x.runOnFunction(F);
   }
 
