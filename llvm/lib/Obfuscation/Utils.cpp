@@ -73,40 +73,36 @@ std::string readAnnotate(Function *f) {
 
 bool isMemberFunction(Function *F)
 {
-
-  //// �������û�в�������ô���϶�������ĳ�Ա����
   // if (F->arg_size() == 0)
   //     return false;
 
-  //// ��ȡ�����ĵ�һ������
+
   // llvm::Argument &arg = *(F->arg_begin());
 
   // const auto type = arg.getType();
   // if(!type)
   //     return false;
-  //// ����һ�������Ƿ���ָ������
+
   // if (!type->isPointerTy())
   //     return false;
 
   // if(!type->getNumContainedTypes())
   //     return false;
-  //// ��ȡָ����ָ�������
+
   // llvm::Type *pointeeType = type->getPointerElementType();
   // if(!pointeeType)
   //     return false;
 
-  //// ���ָ��ָ��������ǽṹ�����ͣ���ô���������������ĳ�Ա����
   // return pointeeType->isStructTy();
 
   const std::string function_name = F->getName().str();
 
-  // ʹ��LLVM��Demangle��������mangled name
+
   const std::string demangled_name = llvm::demangle(function_name);
 
-  // �������������Ƿ�������������������������
+
   if (demangled_name.find("::") != std::string::npos)
   {
-    // ���������������ĳ�Ա
     //errs()<<"class func = "<<demangled_name<<"\r\n";
     return true;
   }
