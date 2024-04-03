@@ -892,7 +892,7 @@ PreservedAnalyses Linearize::run(Module &M, ModuleAnalysisManager &MAM) {
       continue;
     if(F.getName().starts_with("??") || F.getName().contains("std@")) 
       continue;
-    errs()<<"Linear One: func = "<<F.getName().str()<<"\n";
+    //errs()<<"Linear One: func = "<<F.getName().str()<<"\n";
     x.runOnFunction(F);
   }
 

@@ -74,39 +74,39 @@ std::string readAnnotate(Function *f) {
 bool isMemberFunction(Function *F)
 {
 
-  //// Èç¹ûº¯ÊıÃ»ÓĞ²ÎÊı£¬ÄÇÃ´Ëü¿Ï¶¨²»ÊÇÀàµÄ³ÉÔ±º¯Êı
+  //// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ğ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½
   // if (F->arg_size() == 0)
   //     return false;
 
-  //// »ñÈ¡º¯ÊıµÄµÚÒ»¸ö²ÎÊı
+  //// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   // llvm::Argument &arg = *(F->arg_begin());
 
   // const auto type = arg.getType();
   // if(!type)
   //     return false;
-  //// ¼ì²éµÚÒ»¸ö²ÎÊıÊÇ·ñÊÇÖ¸ÕëÀàĞÍ
+  //// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   // if (!type->isPointerTy())
   //     return false;
 
   // if(!type->getNumContainedTypes())
   //     return false;
-  //// »ñÈ¡Ö¸ÕëËùÖ¸ÏòµÄÀàĞÍ
+  //// ï¿½ï¿½È¡Ö¸ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   // llvm::Type *pointeeType = type->getPointerElementType();
   // if(!pointeeType)
   //     return false;
 
-  //// Èç¹ûÖ¸ÕëÖ¸ÏòµÄÀàĞÍÊÇ½á¹¹ÌåÀàĞÍ£¬ÄÇÃ´Õâ¸öº¯Êı¿ÉÄÜÊÇÀàµÄ³ÉÔ±º¯Êı
+  //// ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½
   // return pointeeType->isStructTy();
 
   const std::string function_name = F->getName().str();
 
-  // Ê¹ÓÃLLVMµÄDemangleº¯Êı½âÂëmangled name
+  // Ê¹ï¿½ï¿½LLVMï¿½ï¿½Demangleï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½mangled name
   const std::string demangled_name = llvm::demangle(function_name);
 
-  // ¼ì²é½âÂëºóµÄÃû³ÆÊÇ·ñ°üº¬ÀàÃûºÍ×÷ÓÃÓò½âÎö²Ù×÷·û
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   if (demangled_name.find("::") != std::string::npos)
   {
-    // Õâ¸öº¯Êı¿ÉÄÜÊÇÀàµÄ³ÉÔ±
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ï¿½Ô±
     //errs()<<"class func = "<<demangled_name<<"\r\n";
     return true;
   }

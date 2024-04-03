@@ -15,6 +15,7 @@
 #include "FlatteningEnhanced.h"
 #include "VariableRotation.h"
 #include "Linearize.h"
+#include "EasyCFG.hpp"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 
@@ -34,6 +35,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(VmProtectPass()));
+          MPM.addPass(EasyCfgPass());
         });
         PB.registerOptimizerEarlyEPCallback([](llvm::ModulePassManager &MPM,
                                                OptimizationLevel Level) {

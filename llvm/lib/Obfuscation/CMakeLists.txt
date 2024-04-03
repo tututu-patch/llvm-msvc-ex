@@ -21,6 +21,7 @@ add_llvm_pass_plugin(Obfuscation
   FlatteningEnhanced.cpp
   VariableRotation.cpp
   Linearize.cpp
+  EasyCFG.cpp
   Plugin.cpp
 
   ADDITIONAL_HEADER_DIRS
