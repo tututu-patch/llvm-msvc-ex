@@ -35,7 +35,7 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(createModuleToFunctionPassAdaptor(MBAObfuscationPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(FlatteningPass()));
           MPM.addPass(createModuleToFunctionPassAdaptor(VmProtectPass()));
-          MPM.addPass(EasyCfgPass());
+          
         });
         PB.registerOptimizerEarlyEPCallback([](llvm::ModulePassManager &MPM,
                                                OptimizationLevel Level) {
@@ -58,7 +58,8 @@ llvm::PassPluginLibraryInfo getObfuscationPluginInfo() {
           MPM.addPass(IngvObfuscationPass());
           MPM.addPass(createModuleToFunctionPassAdaptor(VmFlatObfuscationPass()));
           MPM.addPass(Linearize());
-          
+          MPM.addPass(EasyCfgPass());
+        
         });
         //PB.registerVectorizerStartEPCallback(
         //    [](FunctionPassManager &FPM, OptimizationLevel Level) {});
