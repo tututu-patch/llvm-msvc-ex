@@ -132,7 +132,7 @@ PreservedAnalyses EasyCfgPass::run(Module &M, ModuleAnalysisManager &AM) {
         //errs()<<"c++ function\n";
         continue;
       }
-      if (F.isDeclaration()){
+      if (F.isDeclaration()|| f->hasAvailableExternallyLinkage()){
         //errs()<<"decl\n";
         continue;
       }
