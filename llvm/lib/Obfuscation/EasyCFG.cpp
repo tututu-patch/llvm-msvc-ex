@@ -113,7 +113,8 @@ static LoadInst *flatten(Function &F, llvm::SmallVector<LoadInst *> oldLoads) {
 } // namespace
 PreservedAnalyses EasyCfgPass::run(Module &M, ModuleAnalysisManager &AM) {
 
-  if (RunEasyCfg) {
+  bool ret=false;
+  if (1) {
     // Create LowerSwitchPass and RegToMem instances
     LowerSwitchPass *lower = new LowerSwitchPass();
     RegToMemPass *reg = new RegToMemPass();
@@ -144,7 +145,7 @@ PreservedAnalyses EasyCfgPass::run(Module &M, ModuleAnalysisManager &AM) {
 
       for (int i = 0; i < Iterations; i++) {
         //errs() << "Running flatten on " << F.getName() << " (iteration: " << i << ")\n";
-
+        ret=true;
         lower->run(F, FM); // Remove switch statements
         reg->run(F, FM);   // Remove phi nodes
 
@@ -153,8 +154,8 @@ PreservedAnalyses EasyCfgPass::run(Module &M, ModuleAnalysisManager &AM) {
       }
       }
     }
-
-    return PreservedAnalyses::none();
+    if(ret)
+      return PreservedAnalyses::none();
   }
   return PreservedAnalyses::all();
 };
