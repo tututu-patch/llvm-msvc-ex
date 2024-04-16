@@ -114,7 +114,7 @@ static LoadInst *flatten(Function &F, llvm::SmallVector<LoadInst *> oldLoads) {
 PreservedAnalyses EasyCfgPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   bool ret=false;
-  if (1) {
+  if constexpr (true) {
     // Create LowerSwitchPass and RegToMem instances
     LowerSwitchPass *lower = new LowerSwitchPass();
     RegToMemPass *reg = new RegToMemPass();
