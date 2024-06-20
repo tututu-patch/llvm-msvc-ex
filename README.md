@@ -15,8 +15,10 @@ https://github.com/gmh5225, 日天同学的llvm-msvc让人心情激动
 ### 参考
 ```
 https://github.com/gmh5225/awesome-llvm-security#ollvm
-
 ```
+
+### 更新
+放弃TAG自动Build了，自己build吧
 
 ### 计划
 - [x] 在vm-fla-sym添加反符号执行和反内存追踪
@@ -31,7 +33,9 @@ https://github.com/gmh5225/awesome-llvm-security#ollvm
 - [x] x-full 功能，在function上使用vm-fla-level=7
 - [x] 字符串加密等相似加了combine
 - [x] 自定義分割合併 combine_func[tag_number] 模式
-- [ ] x-var-rot 待处理
+- ~~[ ] x-var-rot 待处理~~
+- [] 新功能
+
 
 [![windows-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/windows-llvm-msvc-build.yml)
 [![android-llvm-msvc-build](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml/badge.svg?branch=dev)](https://github.com/backengineering/llvm-msvc/actions/workflows/android-llvm-msvc-build.yml)
